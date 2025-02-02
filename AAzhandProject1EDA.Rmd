@@ -1,0 +1,74 @@
+---
+title: "Project 1 EDA"
+author: "Arman Azhand"
+date: "2025-01-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(visdat)
+library(tidyverse)
+library(corrplot)
+library(GGally)
+library(car)
+```
+
+# EDA
+
+## Import Data
+```{r}
+hospitalData = read.csv(file.choose())
+```
+
+## Sanity check
+```{r}
+summary(hospitalData)
+colSums(is.na(hospitalData))
+vis_miss(hospitalData)
+```
+Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observations of 12 variables. We have no missing values for any variable, thus we do not need to impute for any observations. Out of the 12 variables, one of them is an identifier variable `ID`, and will not be used for predicting. The patient's length of stay `Lgth.of.Sty` is the variable we would like to predict for. Therefor, we have 10 potential explanatory variables and 1 variable we are trying to predict for.
+
+## Data Cleaning
+```{r}
+cleanData = hospitalData %>% select(-ID)
+```
+
+
+## Initial Graphs
+```{r}
+cor_matrix = cor(cleanData)
+
+corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+```
+Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
+
+```{r}
+pairs(cleanData, panel = function(x, y) {
+  points(x, y, pch = 16, col = "blue")  # Scatter points
+  abline(lm(y ~ x), col = "red")  # Add trend line
+})
+```
+```{r}
+ggpairs(cleanData, lower = list(continuous = wrap("smooth", method = "lm", color = "blue")))
+```
+
+
+
+```{r}
+hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
+```
+We see some slight right skew for Lgt.of.Sty
+
+# Objective 1
+```{r}
+allVarsModel = lm(Lgth.of.Sty ~ ., data = cleanData)
+
+par(mfrow = c(2,2))
+plot(allVarsModel)
+par(mfrow = c(1,1))
+
+vif(allVarsModel)
+```
+Number of Beds and Average Patients have *extremely* high VIFs, suggesting high multicollinearity. This makes sense, as the more room a hospital has (number of beds) then the more patients they can have on average. Average number of full time nurses has potential collinearity as well, which also makes sense as a hospital with more beds will likely have more nursing staff to take care of the patients.
