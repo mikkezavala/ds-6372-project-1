@@ -23,9 +23,10 @@ library(car)
 library(ggcorrplot)
 
 knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
+#rmarkdown::render('HospitalStay.Rmd', output_file = 'index.html')
 ```
 
-# Hospital Saty
+# Hospital Stay
 
 ## EDA
 

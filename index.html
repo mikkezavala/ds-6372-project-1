@@ -2761,8 +2761,8 @@ border-radius: 0px;
 </div>
 
 
-<div id="hospital-saty" class="section level1">
-<h1>Hospital Saty</h1>
+<div id="hospital-stay" class="section level1">
+<h1>Hospital Stay</h1>
 <div id="eda" class="section level2">
 <h2>EDA</h2>
 <div id="import-data" class="section level3">
@@ -2821,20 +2821,13 @@ the hospital</li>
 <div id="summary-of-the-data-set" class="section level4">
 <h4>Summary of the Data Set</h4>
 <pre class="r"><code>summary(hospitalData)</code></pre>
-<pre><code>##        ID       Lgth.of.Sty          Age           Inf.Risk       R.Cul.Rat    
-##  Min.   :  1   Min.   : 6.700   Min.   :38.80   Min.   :1.300   Min.   : 1.60  
-##  1st Qu.: 29   1st Qu.: 8.340   1st Qu.:50.90   1st Qu.:3.700   1st Qu.: 8.40  
-##  Median : 57   Median : 9.420   Median :53.20   Median :4.400   Median :14.10  
-##  Mean   : 57   Mean   : 9.648   Mean   :53.23   Mean   :4.355   Mean   :15.79  
-##  3rd Qu.: 85   3rd Qu.:10.470   3rd Qu.:56.20   3rd Qu.:5.200   3rd Qu.:20.30  
-##  Max.   :113   Max.   :19.560   Max.   :65.90   Max.   :7.800   Max.   :60.50  
-##   R.CX.ray.Rat        N.Beds        Med.Sc.Aff       Region     
-##  Min.   : 39.60   Min.   : 29.0   Min.   :1.00   Min.   :1.000  
-##  1st Qu.: 69.50   1st Qu.:106.0   1st Qu.:2.00   1st Qu.:2.000  
-##  Median : 82.30   Median :186.0   Median :2.00   Median :2.000  
-##  Mean   : 81.63   Mean   :252.2   Mean   :1.85   Mean   :2.363  
-##  3rd Qu.: 94.10   3rd Qu.:312.0   3rd Qu.:2.00   3rd Qu.:3.000  
-##  Max.   :133.50   Max.   :835.0   Max.   :2.00   Max.   :4.000  
+<pre><code>##        ID       Lgth.of.Sty          Age           Inf.Risk       R.Cul.Rat      R.CX.ray.Rat        N.Beds        Med.Sc.Aff       Region     
+##  Min.   :  1   Min.   : 6.700   Min.   :38.80   Min.   :1.300   Min.   : 1.60   Min.   : 39.60   Min.   : 29.0   Min.   :1.00   Min.   :1.000  
+##  1st Qu.: 29   1st Qu.: 8.340   1st Qu.:50.90   1st Qu.:3.700   1st Qu.: 8.40   1st Qu.: 69.50   1st Qu.:106.0   1st Qu.:2.00   1st Qu.:2.000  
+##  Median : 57   Median : 9.420   Median :53.20   Median :4.400   Median :14.10   Median : 82.30   Median :186.0   Median :2.00   Median :2.000  
+##  Mean   : 57   Mean   : 9.648   Mean   :53.23   Mean   :4.355   Mean   :15.79   Mean   : 81.63   Mean   :252.2   Mean   :1.85   Mean   :2.363  
+##  3rd Qu.: 85   3rd Qu.:10.470   3rd Qu.:56.20   3rd Qu.:5.200   3rd Qu.:20.30   3rd Qu.: 94.10   3rd Qu.:312.0   3rd Qu.:2.00   3rd Qu.:3.000  
+##  Max.   :113   Max.   :19.560   Max.   :65.90   Max.   :7.800   Max.   :60.50   Max.   :133.50   Max.   :835.0   Max.   :2.00   Max.   :4.000  
 ##     Avg.Pat         Avg.Nur       Pct.Ser.Fac   
 ##  Min.   : 20.0   Min.   : 14.0   Min.   : 5.70  
 ##  1st Qu.: 68.0   1st Qu.: 66.0   1st Qu.:31.40  
@@ -2846,10 +2839,10 @@ the hospital</li>
 <div id="finding-empyt-values" class="section level4">
 <h4>Finding empyt values</h4>
 <pre class="r"><code>colSums(is.na(hospitalData))</code></pre>
-<pre><code>##           ID  Lgth.of.Sty          Age     Inf.Risk    R.Cul.Rat R.CX.ray.Rat 
-##            0            0            0            0            0            0 
-##       N.Beds   Med.Sc.Aff       Region      Avg.Pat      Avg.Nur  Pct.Ser.Fac 
-##            0            0            0            0            0            0</code></pre>
+<pre><code>##           ID  Lgth.of.Sty          Age     Inf.Risk    R.Cul.Rat R.CX.ray.Rat       N.Beds   Med.Sc.Aff       Region      Avg.Pat      Avg.Nur 
+##            0            0            0            0            0            0            0            0            0            0            0 
+##  Pct.Ser.Fac 
+##            0</code></pre>
 <div id="plot-of-missing-data" class="section level5">
 <h5>Plot of missing data</h5>
 <pre class="r"><code>vis_miss(hospitalData)</code></pre>
@@ -2984,10 +2977,8 @@ observations could help assess model robustness.</p>
 <div id="variable-inflation" class="section level3">
 <h3>Variable Inflation</h3>
 <pre class="r"><code>vif(allVarsModel)</code></pre>
-<pre><code>##          Age     Inf.Risk    R.Cul.Rat R.CX.ray.Rat       N.Beds   Med.Sc.Aff 
-##     1.109711     2.084059     1.917497     1.412452    34.370407     1.787140 
-##       Region      Avg.Pat      Avg.Nur  Pct.Ser.Fac 
-##     1.331506    32.474034     6.901296     3.198243</code></pre>
+<pre><code>##          Age     Inf.Risk    R.Cul.Rat R.CX.ray.Rat       N.Beds   Med.Sc.Aff       Region      Avg.Pat      Avg.Nur  Pct.Ser.Fac 
+##     1.109711     2.084059     1.917497     1.412452    34.370407     1.787140     1.331506    32.474034     6.901296     3.198243</code></pre>
 <p>Number of Beds and Average Patients have <em>extremely</em> high
 VIFs, suggesting high multicollinearity. This makes sense, as the more
 room a hospital has (number of beds) then the more patients they can
