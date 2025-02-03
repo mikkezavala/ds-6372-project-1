@@ -1,0 +1,204 @@
+---
+title: "Unit 5 Project - Hospital"
+author: 
+  - "Miguel Zavala - Student"
+  - "Ahmand Salam - Student"
+  - "Arman Azhand - Student"
+date: "2025-01-29"
+output: 
+  # word_document: default
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(visdat)
+library(tidyverse)
+library(corrplot)
+library(GGally)
+library(car)
+library(ggcorrplot)
+
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Hospital Saty
+
+## EDA
+
+### Import Data
+
+```{r}
+hospitalData <- read.csv("./project_hospitals.csv", header = TRUE)
+```
+
+### Column Descriptions
+
+-   ID: Unique identifier.
+-   Lgth.of.Sty: Length of stay (Variable of interest).
+-   Age: Average Age of the patient.
+-   Inf.Risk: Infection risk.
+    -   Average estimated probability of hospital infection
+-   R.Cul.Rat: Culture rate.
+    -   Ratio of \# of cultures performed to number of patients without symptoms of infection times 100
+-   R.CX.ray.Rat: Chest X-ray rate.
+    -   Ratio of \# of cultures performed to number of patients without symptoms of pneumonia time 100
+-   N.Beds: Number of beds in the hospital.
+    -   Average number of beds.
+-   Med.Sc.Aff: Medical school affiliation.
+    -   1=Yes, 2=No
+-   Region: Region of the hospital.
+    -   Geographic region: 1=NE, 2=NC,3=S, 4=W
+-   Avg.Pat: Average number of patients.
+    -   Average number of patients in hospital per day.
+-   Avg.Nur: Average number of nurses.
+    -   Average number of full time nurses.
+-   Pct.Ser.Fac: Percentage of service facilities.
+    -   Percent of 35 potential facilities and services that are provided by the hospital
+
+### Sanity check
+
+#### Summary of the Data Set
+
+```{r}
+summary(hospitalData)
+```
+
+#### Finding empyt values
+
+```{r}
+colSums(is.na(hospitalData))
+```
+
+##### Plot of missing data
+
+```{r}
+vis_miss(hospitalData)
+```
+
+Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observations of 12 variables. We have no missing values for any variable, thus we do not need to impute for any observations. Out of the 12 variables, one of them is an identifier variable `ID`, and will not be used for predicting. The patient's length of stay `Lgth.of.Sty` is the variable we would like to predict for. Therefor, we have 10 potential explanatory variables and 1 variable we are trying to predict for.
+
+### Visualizing Hospital Stay Distribution
+
+```{r}
+hist(hospitalData$Lgth.of.Sty, xlab = "Lenght of Stay (Days)", main = "")
+```
+
+We see some slight right skew for Lgt.of.Sty
+
+### Data Cleaning
+
+```{r}
+cleanData <- hospitalData |> select(-ID)
+# cleanData$RegionEncoded <- factor(cleanData$Region,
+#   levels = c(1, 2, 3, 4),
+#   labels = c("NE", "NC", "S", "W")
+# )
+```
+
+### Initial Graphs
+
+```{r}
+cor_matrix = cor(cleanData |> select(-Region))
+
+# corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+ggcorrplot(cor_matrix, lab = TRUE)
+```
+
+Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
+
+```{r}
+pairs(cleanData |> select(-Region, -Med.Sc.Aff), panel = function(x, y) {
+  points(x, y, pch = 16, col = "blue")  # Scatter points
+  abline(lm(y ~ x), col = "red")  # Add trend line
+})
+```
+
+```{r}
+ggpairs(cleanData |> select(-Region, -Med.Sc.Aff), lower = list(continuous = wrap("smooth", method = "lm", color = "blue")), progress = FALSE)
+```
+
+The variables Number of Beds, Average Patients, Average Nurses, and Percentage of service facilities; exhibit high intercorrelation, particularly between Number of Beds and Average Patients (0.981), which could introduce collinearity in a predictive model.
+
+An important strong correlation that appears to be an important factor in hospital stays is Infection Risk (0.533).
+
+Both Culture Rate and Chest X-Ray Rate displays moderate correlation with Infection Risk; thhis suggests an intuitive relationship: as infection risk increases, more diagnostic tests are performed. Infection Risk may also serve as a useful predictor for Length of Stay, as higher infection risks could lead to prolonged hospital stays.
+
+```{r}
+hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
+```
+
+We see some slight right skew for Lenght of Stay that could suggest
+
+#### Lenght of Stay vs. Infection Risk
+
+```{r}
+ggplot(cleanData, aes(y = Inf.Risk, x = Lgth.of.Sty)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "blue") +
+  labs(title = "Length of Stay vs. Infection Risk")
+```
+
+We can spot two outliers around 17 and 20 when we analyze the relationship with Infection Risk those values would consider further analysis to understand the behavior.
+
+#### Lenght of Stay vs. Region
+```{r}
+ggplot(cleanData, aes(y = Lgth.of.Sty, x = Region)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Length of Stay vs. Region")
+```
+
+#### Lenght of Stay vs. Avg. Nurses
+```{r}
+ggplot(cleanData, aes(y = Lgth.of.Sty, x = Avg.Nur)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "green") +
+  labs(title = "Length of Stay vs, Avg Number of Nurses")
+```
+
+We see an increase of infections at lower averages in the number of nurses, with a Plateu effect when reaching close to 200 in average and continuing the trend over 400.
+
+#### Lenght of Stay vs. Avg. Patiernts
+```{r}
+ggplot(cleanData, aes(y = Lgth.of.Sty, x = Avg.Pat)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "purple") +
+  labs(title = "Length of Stay vs. Avg Patients")
+```
+
+#### Lenght of Stay vs. Avg. Number of Beds
+```{r}
+ggplot(cleanData, aes(y = Lgth.of.Sty, x = N.Beds)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "brown") +
+  labs(title = "Length of Stay vs Avg. Number of Beds")
+```
+
+## Objective 1
+
+```{r}
+allVarsModel = lm(Lgth.of.Sty ~ ., data = cleanData)
+par(mfrow = c(2,2))
+plot(allVarsModel)
+```
+
+The diagnostic plots suggest the linear model fits reasonably well. 
+
+The Residuals vs. Fitted and Scale-Location plots show residuals scattered around zero, with no strong signs of nonlinearity or heteroskedasticity. However, Observation 47 stands out, showing a large residual across multiple plots. In the Q–Q plot, most points follow the regression line, but Observation 47 appears on the right tail, deviating from normality.
+
+Leverage diagnostics indicate that most data points are well-standardized around the fitted line. Observation 47 is near the threshold for Cook’s distance, suggesting potential influence, while Observation 112 exhibits high leverage without strong influence. These points may warrant further investigation to understand their impact on the model.
+
+No major assumption violations are evident, but examining these observations could help assess model robustness.
+
+
+### Variable Inflation
+
+```{r}
+vif(allVarsModel)
+```
+
+Number of Beds and Average Patients have *extremely* high VIFs, suggesting high multicollinearity. This makes sense, as the more room a hospital has (number of beds) then the more patients they can have on average. Average number of full time nurses has potential collinearity as well, which also makes sense as a hospital with more beds will likely have more nursing staff to take care of the patients.
