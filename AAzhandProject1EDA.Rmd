@@ -107,6 +107,14 @@ ggplot(data=cleanData,aes(x=Med.Sc.Aff,y=Lgth.of.Sty,colour=Region)) +
   geom_boxplot() +
   ggtitle("Boxplot of Medical School Affiliation vs Patient Length of Stay", "Grouped by Region")
 ```
+By looking at the distributions (via the boxplots), we can see that there are some differences between a patient's length of stay if we group by Region (or by Medical School Affiliation).
+
+**If grouping by Medical school affiliation:  **
+Length of stay between the regions is fairly similar on average if there is an affiliation for medical school, but the distributions are much more different between the regions. If there is no affiliation, then the distributions are a bit more similar, but the averages are different between each region.
+
+**If grouping by Region:  **
+Length of stay on average tends to be similar between the regions (being slightly less in the W and S regions) with NE having a wider distribution of length of stay. Interesting to note that medical school affiliation tends to have lower length of stay if the affiliation is none.
+
 ### Continuous grouped by Categorical vs Length of Stay
 
 #### Grouped by Region
