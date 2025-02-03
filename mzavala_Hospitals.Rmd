@@ -1,0 +1,138 @@
+---
+title: "Unit 5 Project - Hospital"
+author: 
+  - "Miguel Zavala - Student"
+  - "MSDS 6372: Jacob Turner, Professor"
+date: "2025-01-29"
+output: 
+  word_document: default
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+    theme: united
+---
+
+```{r setup, include=FALSE}
+library(ggcorrplot)
+library(naniar)
+library(car)
+
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Project 1 - Hospital Stay
+
+## Exploratory Data Analysis
+
+### Data inspection
+
+```{r}
+hospital_data = read.csv("./_data/project_hospitals.csv", header = TRUE)
+
+head(hospital_data)
+str(hospital_data)
+vis_miss(hospital_data)
+```
+
+Hospital data is comprised of 113 observations and 3 variables including our target Lgth.of.Sty, after observing the data no observations are missing any of the variables, no imputation will be performed
+
+### Identifying data patterns
+
+```{r}
+all_model <- lm(Lgth.of.Sty ~ ., data = hospital_data)
+par(mfrow = c(2, 2))
+plot(all_model)
+```
+
+```{r}
+hist(hospital_data$Lgth.of.Sty, xlab = "Lenght of Stay (Days)", main = "")
+```
+
+```{r}
+quantile(hospital_data$Lgth.of.Sty, probs = .9)
+```
+
+### Correlation
+
+```{r}
+cor_matrix <- cor(hospital_data[, -1], use = "pairwise.complete.obs")
+ggcorrplot(cor_matrix, lab = TRUE)
+```
+
+After analyzing the correlation matrix, we observe both strong positive and negative correlations among multiple variables and length of stay. Notably, infection risk and average number of patients show a strong positive correlation with length of stay, suggesting that hospitals with higher infection rates and patient loads tend to have longer hospital stays.
+
+Additionally, infection risk has a moderate correlation with the number of patients, indicating a potential relationship between hospital occupancy and infection levels. A strong positive correlation is also observed between the number of patients and the number of beds, which aligns with expectations, as hospitals with larger capacities tend to accommodate more patients. Similarly, average patient count and the number of nurses show a strong positive correlation, reflecting hospital staffing adjustments based on patient volume.
+
+Interestingly, the hospital’s region exhibits a moderate negative correlation with length of stay, suggesting that geographic or policy-related factors may influence hospitalization durations. Lastly, we note a moderate correlation between culture test rates and infection risk, implying that hospitals with higher infection risks may conduct more culture tests, though additional factors may contribute to this relationship.
+
+
+### Linear relationships
+
+#### Lenght of Stay vs. Infection Risk
+```{r}
+ggplot(hospital_data, aes(y = Inf.Risk, x = Lgth.of.Sty)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "blue") +
+  labs(title = "Length of Stay vs. Infection Risk")
+```
+
+We can spot two outliers around 17 and 20 when we analyze the relationship with Infection Risk those values would consider further analysis to understand the behavior.
+
+```{r}
+ggplot(hospital_data, aes(y = Lgth.of.Sty, x = Region)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Length of Stay vs. Infection Risk")
+```
+
+```{r}
+ggplot(hospital_data, aes(y = Lgth.of.Sty, x = Avg.Nur)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "green") +
+  labs(title = "Length of Stay vs Avg Number of Nurses")
+```
+
+We see an increase of infections at lower averages in the number of nurses, with a Plateu effect when reaching close to 200 in average and continuing the trend over 400.
+
+```{r}
+ggplot(hospital_data, aes(y = Lgth.of.Sty, x = Avg.Pat)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "purple") +
+  labs(title = "Length of Stay vs Avg Patients")
+```
+
+```{r}
+ggplot(hospital_data, aes(y = Lgth.of.Sty, x = N.Beds)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "brown") +
+  labs(title = "Length of Stay vs Avg. Number of Beds")
+```
+
+### Variable Inflation Analysis
+
+```{r}
+base_model <- Lgth.of.Sty ~ .
+base_fit <- lm(base_model, data = hospital_data)
+vif_base <- vif(base_fit)
+print(vif_base)
+```
+
+The base linear where we use all the variables in the model's, the VIF results indicate significant multicollinearity among several predictor variables:
+
+-   Number of Beds (N.Beds) – VIF: 34.38
+    -   This extremely high value suggests that N.Beds shares redundant information with other predictors, likely Avg. Patients (Avg.Pat) or Avg. Nurses (Avg.Nur).
+-   Average Number of Patients (Avg.Pat) – VIF: 32.65
+    -   This extreme value confirms strong collinearity, likely with Number of Beds (N.Beds), as hospitals with more beds generally accommodate more patients. Average Number of Nurses (Avg.Nur) – VIF: 7.24
+
+Although not as extreme, this still indicates notable collinearity, likely with Avg. Patients (Avg.Pat), as hospitals scale nurse staffing based on patient volume.
+
+```{r}
+first_model <- Lgth.of.Sty ~ Inf.Risk:Avg.Nur + R.Cul.Rat + R.CX.ray.Rat + Med.Sc.Aff + Region:Avg.Pat + Pct.Ser.Fac
+fit_first_model <- lm(first_model, data = hospital_data)
+vif_base <- vif(fit_first_model)
+
+print(vif_base)
+summary(fit_first_model)
+```
+

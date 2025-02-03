@@ -6,29 +6,48 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(visdat)
 library(tidyverse)
 library(corrplot)
 library(GGally)
 library(car)
+library(ggcorrplot)
+
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
 ```
 
 # EDA
 
 ## Import Data
 ```{r}
-hospitalData = read.csv(file.choose())
+hospitalData <- read.csv("./project_hospitals.csv", header = TRUE)
 ```
 
 ## Sanity check
+
+### Summary of the Data Set
 ```{r}
 summary(hospitalData)
+```
+### Finding empyt values
+```{r}
 colSums(is.na(hospitalData))
+```
+#### Plot of missing data
+```{r}
 vis_miss(hospitalData)
 ```
+
 Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observations of 12 variables. We have no missing values for any variable, thus we do not need to impute for any observations. Out of the 12 variables, one of them is an identifier variable `ID`, and will not be used for predicting. The patient's length of stay `Lgth.of.Sty` is the variable we would like to predict for. Therefor, we have 10 potential explanatory variables and 1 variable we are trying to predict for.
+
+
+### Visualizing Hospital Stay Distribution
+```{r}
+hist(hospitalData$Lgth.of.Sty, xlab = "Lenght of Stay (Days)", main = "")
+```
+We see some slight right skew for Lgt.of.Sty
+
 
 ## Data Cleaning
 ```{r}
@@ -40,7 +59,8 @@ cleanData = hospitalData %>% select(-ID)
 ```{r}
 cor_matrix = cor(cleanData)
 
-corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+# corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+ggcorrplot(cor_matrix, lab = TRUE)
 ```
 Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
 
@@ -50,6 +70,7 @@ pairs(cleanData, panel = function(x, y) {
   abline(lm(y ~ x), col = "red")  # Add trend line
 })
 ```
+
 ```{r}
 ggpairs(cleanData, lower = list(continuous = wrap("smooth", method = "lm", color = "blue")))
 ```
