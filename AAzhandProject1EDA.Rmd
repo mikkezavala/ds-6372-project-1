@@ -13,6 +13,8 @@ library(corrplot)
 library(GGally)
 library(car)
 library(ggcorrplot)
+library(plyr)
+library(gridExtra)
 
 knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
 ```
@@ -30,7 +32,7 @@ hospitalData <- read.csv("./project_hospitals.csv", header = TRUE)
 ```{r}
 summary(hospitalData)
 ```
-### Finding empyt values
+### Finding empty values
 ```{r}
 colSums(is.na(hospitalData))
 ```
@@ -44,25 +46,46 @@ Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observ
 
 ### Visualizing Hospital Stay Distribution
 ```{r}
-hist(hospitalData$Lgth.of.Sty, xlab = "Lenght of Stay (Days)", main = "")
+hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
 ```
-We see some slight right skew for Lgt.of.Sty
+We see some slight right skew for `Lgth.of.Sty`.
 
 
 ## Data Cleaning
 ```{r}
-cleanData = hospitalData %>% select(-ID)
+cleanData = hospitalData %>% select(-ID) # remove ID
+cleanData$Region = as.factor(cleanData$Region) # convert Region from int to factor
+cleanData$Med.Sc.Aff = as.factor(cleanData$Med.Sc.Aff) # convert Med.Sc.Aff from int to factor
+summary(cleanData) # sanity check
+
+# revalue factors
+cleanData$Region = revalue(cleanData$Region, c("1" = "NE", "2" = "NC", "3" = "S", "4" = "W"))
+cleanData$Med.Sc.Aff = revalue(cleanData$Med.Sc.Aff, c("1" = "Yes", "2" = "No"))
+summary(cleanData) # sanity check
+
+# labels for graphs
+cleanDataLabels = c("Length of Stay",
+                    "Age",
+                    "Infection Risk",
+                    "Routine culturing ratio",
+                    "Routine chest X-ray ratio",
+                    "Number of beds",
+                    "Medical School Affiliation",
+                    "Region",
+                    "Average Daily census",
+                    "Number of nurses",
+                    "Available facilities")
 ```
-
-
 ## Initial Graphs
 ```{r}
-cor_matrix = cor(cleanData)
+# correlation matrix
+cor_matrix = cor(cleanData %>% select(-Med.Sc.Aff, -Region)) # removed categorial variables
 
+# correlation plot
 # corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
 ggcorrplot(cor_matrix, lab = TRUE)
 ```
-Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
+Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, + Number of Beds.
 
 ```{r}
 pairs(cleanData, panel = function(x, y) {
@@ -75,12 +98,43 @@ pairs(cleanData, panel = function(x, y) {
 ggpairs(cleanData, lower = list(continuous = wrap("smooth", method = "lm", color = "blue")))
 ```
 
-
-
+### Categorical grouped by Categorical vs Length of Stay
 ```{r}
-hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
+ggplot(data=cleanData,aes(x=Region,y=Lgth.of.Sty,colour=Med.Sc.Aff)) +
+  geom_boxplot() +
+  ggtitle("Boxplot of Region vs Patient Length of Stay", "Grouped by Medical School Affiliation")
+ggplot(data=cleanData,aes(x=Med.Sc.Aff,y=Lgth.of.Sty,colour=Region)) +
+  geom_boxplot() +
+  ggtitle("Boxplot of Medical School Affiliation vs Patient Length of Stay", "Grouped by Region")
 ```
-We see some slight right skew for Lgt.of.Sty
+### Continuous grouped by Categorical vs Length of Stay
+
+#### Grouped by Region
+```{r}
+for (i in c(2:6,9:11)) {
+  tempPlot = ggplot(data=cleanData,aes(x=cleanData[,i],y=Lgth.of.Sty,colour=Region)) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0(cleanDataLabels[i]," vs Length of Stay"), "Grouped by Region") +
+    xlab(cleanDataLabels[i]) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "none")
+  print(tempPlot)
+}
+```
+#### Grouped by Medical School Affiliation
+```{r}
+for (i in c(2:6,9:11)) {
+  tempPlot = ggplot(data=cleanData,aes(x=cleanData[,i],y=Lgth.of.Sty,colour=Med.Sc.Aff)) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0(cleanDataLabels[i]," vs Length of Stay"), "Grouped by Medical School Affiliation") +
+    xlab(cleanDataLabels[i]) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "none")
+  print(tempPlot)
+}
+```
 
 # Objective 1
 ```{r}
@@ -90,6 +144,11 @@ par(mfrow = c(2,2))
 plot(allVarsModel)
 par(mfrow = c(1,1))
 
+summary(allVarsModel)
+```
+
+## VIFs
+```{r}
 vif(allVarsModel)
 ```
 Number of Beds and Average Patients have *extremely* high VIFs, suggesting high multicollinearity. This makes sense, as the more room a hospital has (number of beds) then the more patients they can have on average. Average number of full time nurses has potential collinearity as well, which also makes sense as a hospital with more beds will likely have more nursing staff to take care of the patients.
