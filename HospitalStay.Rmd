@@ -185,7 +185,10 @@ ggplot(cleanData, aes(y = Lgth.of.Sty, x = N.Beds)) +
 allVarsModel = lm(Lgth.of.Sty ~ ., data = cleanData)
 par(mfrow = c(2,2))
 plot(allVarsModel)
+```
 
+### All Variables Model Sumary
+```{r}
 summary(allVarsModel)
 ```
 
@@ -210,36 +213,35 @@ Number of Beds and Average Patients have *extremely* high VIFs, suggesting high 
 ```{r Length of Stay vs Infection Risk by Region}
 
 ## Interaction Exploration
-
-cleanData$RegionAsFactor <- factor(cleanData$Region, levels = c(1,2,3,4), labels = c("NE", "NC", "S", "W"))
-ggplot(cleanData, aes(x=Inf.Risk, y=Lgth.of.Sty, color=RegionAsFactor)) + 
+cleanData$RegionAsFactor <- factor(cleanData$Region, levels = c(1, 2, 3, 4), labels = c("NE", "NC", "S", "W"))
+ggplot(cleanData, aes(x = Inf.Risk, y = Lgth.of.Sty, color = RegionAsFactor)) +
   geom_point() +
-  geom_smooth(method="lm", se=FALSE) + 
-  ggtitle("Length of Stay vs Infection Risk by Region") + 
-  scale_color_manual(values=c("red", "blue", "green", "purple")) + 
-  labs(color="Region")
-
+  geom_smooth(method = "lm", se = FALSE) +
+  ggtitle("Length of Stay vs Infection Risk by Region") +
+  scale_color_manual(values = c("red", "blue", "green", "purple")) +
+  labs(color = "Region")
 ```
 
-## Length of Stay vs Infection Risk by Region Interaction Observations:
+### Length of Stay vs Infection Risk by Region Interaction Observations:
 
 NE (Red) shows the steepest slope: Infection risk has a stronger impact on Length of Stay in Northeast hospitals compared to other regions.However, the NE region has more high outliers. 
 NC (Blue) and S (Green) have moderate slopes, suggesting that infection risk moderately influences hospital stay duration in these regions.
 W (Purple) appears almost flat, low variance. This may indicate that in Western hospitals, infection risk has little to no impact on length of stay.
 
+### Anova Model - Fit ANOVA model with interaction effect
 ```{r}
+anova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data = cleanData)
+summary(anova_model)
+```
 
-# Fit ANCOVA model with interaction effect
-ancova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data=cleanData)
+#### ANOVA test for significance of interaction terms
+```{r}
+anova(anova_model)
+```
 
-# Display model summary
-summary(ancova_model)
-
-# ANOVA test for significance of interaction terms
-anova(ancova_model)
-
-# Checking Variance Inflation Factor (VIF) for multicollinearity
-vif(ancova_model)
+#### # Checking Variance Inflation Factor (VIF) for multicollinearity
+```{r}
+vif(anova_model)
 ```
 
 Interpretations: 
