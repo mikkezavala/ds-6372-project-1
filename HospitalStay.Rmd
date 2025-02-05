@@ -185,6 +185,8 @@ ggplot(cleanData, aes(y = Lgth.of.Sty, x = N.Beds)) +
 allVarsModel = lm(Lgth.of.Sty ~ ., data = cleanData)
 par(mfrow = c(2,2))
 plot(allVarsModel)
+
+summary(allVarsModel)
 ```
 
 The diagnostic plots suggest the linear model fits reasonably well. 
@@ -203,3 +205,45 @@ vif(allVarsModel)
 ```
 
 Number of Beds and Average Patients have *extremely* high VIFs, suggesting high multicollinearity. This makes sense, as the more room a hospital has (number of beds) then the more patients they can have on average. Average number of full time nurses has potential collinearity as well, which also makes sense as a hospital with more beds will likely have more nursing staff to take care of the patients.
+
+
+```{r Length of Stay vs Infection Risk by Region}
+
+## Interaction Exploration
+
+cleanData$RegionAsFactor <- factor(cleanData$Region, levels = c(1,2,3,4), labels = c("NE", "NC", "S", "W"))
+ggplot(cleanData, aes(x=Inf.Risk, y=Lgth.of.Sty, color=RegionAsFactor)) + 
+  geom_point() +
+  geom_smooth(method="lm", se=FALSE) + 
+  ggtitle("Length of Stay vs Infection Risk by Region") + 
+  scale_color_manual(values=c("red", "blue", "green", "purple")) + 
+  labs(color="Region")
+
+```
+
+## Length of Stay vs Infection Risk by Region Interaction Observations:
+
+NE (Red) shows the steepest slope: Infection risk has a stronger impact on Length of Stay in Northeast hospitals compared to other regions.However, the NE region has more high outliers. 
+NC (Blue) and S (Green) have moderate slopes, suggesting that infection risk moderately influences hospital stay duration in these regions.
+W (Purple) appears almost flat, low variance. This may indicate that in Western hospitals, infection risk has little to no impact on length of stay.
+
+```{r}
+
+# Fit ANCOVA model with interaction effect
+ancova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data=cleanData)
+
+# Display model summary
+summary(ancova_model)
+
+# ANOVA test for significance of interaction terms
+anova(ancova_model)
+
+# Checking Variance Inflation Factor (VIF) for multicollinearity
+vif(ancova_model)
+```
+
+Interpretations: 
+
+- A one-unit increase in infection risk leads to an increase of ~1.35 days in hospital stay (in the baseline NE region). This is highly statistically significant, suggesting infection risk is a key predictor of length of stay.
+
+Patients in North Central hospitals stay approximately 3.02 days longer than those in the Northeast on average, with a statistically significant result. Similarly, patients in Southern hospitals have an average stay that is about 2.59 days longer than in the Northeast, also showing statistical significance. In the Western region, the average length of stay is around 3.5 days longer than in the Northeast; however, this result is only marginally significant.
