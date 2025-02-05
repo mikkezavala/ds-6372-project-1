@@ -98,10 +98,25 @@ cleanData <- hospitalData |> select(-ID)
 #   levels = c(1, 2, 3, 4),
 #   labels = c("NE", "NC", "S", "W")
 # )
+cleanDataLabels <- c(
+  "Length of Stay",
+  "Age",
+  "Infection Risk",
+  "Routine culturing ratio",
+  "Routine chest X-ray ratio",
+  "Number of beds",
+  "Medical School Affiliation",
+  "Region",
+  "Average Daily census",
+  "Number of nurses",
+  "Available facilities"
+)
 ```
 
 ### Initial Graphs
 
+
+### Correlation 
 ```{r}
 cor_matrix = cor(cleanData |> select(-Region))
 
@@ -127,6 +142,35 @@ The variables Number of Beds, Average Patients, Average Nurses, and Percentage o
 An important strong correlation that appears to be an important factor in hospital stays is Infection Risk (0.533).
 
 Both Culture Rate and Chest X-Ray Rate displays moderate correlation with Infection Risk; thhis suggests an intuitive relationship: as infection risk increases, more diagnostic tests are performed. Infection Risk may also serve as a useful predictor for Length of Stay, as higher infection risks could lead to prolonged hospital stays.
+
+### Correlograms with Log Transformations
+```{r}
+corData <- cleanData %>% select(-Med.Sc.Aff, -Region)
+lin_logCorData <- log(corData)
+lin_logCorData$Lgth.of.Sty <- corData$Lgth.of.Sty
+log_linCorData <- corData %>% select(-Lgth.of.Sty)
+log_linCorData$logLgth.of.Sty <- log(corData$Lgth.of.Sty)
+```
+
+#### Linear-Linear Corr
+```{r}
+correlation_matrix <- cor(corData, method = "pearson")
+ggcorrplot(correlation_matrix, lab = TRUE, title = "Linear-Linear")
+```
+
+#### Linear-Log Corr
+```{r}
+lin_log_correlation_matrix <- cor(lin_logCorData, method = "pearson")
+ggcorrplot(lin_log_correlation_matrix, lab = TRUE, title = "Linear-Log")
+```
+
+#### Log-Linear Corr
+```{r}
+log_lin_correlation_matrix <- cor(log_linCorData, method = "pearson")
+ggcorrplot(log_lin_correlation_matrix, lab = TRUE, title = "Log-Linear")
+```
+
+### Data Viz
 
 ```{r}
 hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
@@ -177,6 +221,49 @@ ggplot(cleanData, aes(y = Lgth.of.Sty, x = N.Beds)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "loess", se = FALSE, color = "brown") +
   labs(title = "Length of Stay vs Avg. Number of Beds")
+```
+
+
+### Length of Stay vs other continuous variables
+```{r}
+for (i in c(2:6, 9:11)) {
+  tempPlot <- ggplot(data = cleanData, aes(x = cleanData[, i], y = Lgth.of.Sty)) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0(cleanDataLabels[i], " vs Length of Stay")) +
+    xlab(cleanDataLabels[i]) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "none")
+  print(tempPlot)
+}
+```
+
+### Length of Stay vs log of other continuous variables
+```{r}
+for (i in c(2:6, 9:11)) {
+  tempPlot <- ggplot(data = cleanData, aes(x = log(cleanData[, i]), y = Lgth.of.Sty)) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0("Log ", cleanDataLabels[i], " vs Length of Stay")) +
+    xlab(paste0("log ", cleanDataLabels[i])) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "none")
+  print(tempPlot)
+}
+```
+
+### log Length of Stay vs other continuous variables
+```{r}
+for (i in c(2:6,9:11)) {
+  tempPlot = ggplot(data=cleanData,aes(x=log(cleanData[,i]),y=log(Lgth.of.Sty))) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0("Log ", cleanDataLabels[i]," vs Length of Stay")) +
+    xlab(cleanDataLabels[i]) +
+    ylab("log Length of Stay (Days)") +
+    theme(legend.position = "none")
+  print(tempPlot)
+}
 ```
 
 ## Objective 1
