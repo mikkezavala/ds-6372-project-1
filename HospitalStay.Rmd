@@ -21,6 +21,8 @@ library(corrplot)
 library(GGally)
 library(car)
 library(ggcorrplot)
+library(glmnet)
+library(caret)
 
 knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
 #rmarkdown::render('HospitalStay.Rmd', output_file = 'index.html')
@@ -336,3 +338,57 @@ Interpretations:
 - A one-unit increase in infection risk leads to an increase of ~1.35 days in hospital stay (in the baseline NE region). This is highly statistically significant, suggesting infection risk is a key predictor of length of stay.
 
 Patients in North Central hospitals stay approximately 3.02 days longer than those in the Northeast on average, with a statistically significant result. Similarly, patients in Southern hospitals have an average stay that is about 2.59 days longer than in the Northeast, also showing statistical significance. In the Western region, the average length of stay is around 3.5 days longer than in the Northeast; however, this result is only marginally significant.
+
+```{r}
+
+# Prepare data: Separate predictors (X) and target variable (y)
+X <- as.matrix(cleanData[, -which(names(cleanData) == "Lgth.of.Sty")])  # Convert predictors to matrix
+y <- cleanData$Lgth.of.Sty  # Target variable
+
+# Perform LASSO regression with cross-validation
+cv_lasso <- cv.glmnet(X, y, alpha = 1, nfolds = 10)  # alpha = 1 for LASSO
+
+# Plot cross-validation results
+plot(cv_lasso)
+
+# Find the optimal lambda (penalty parameter)
+best_lambda <- cv_lasso$lambda.min
+print(paste("Optimal lambda:", best_lambda))
+
+# Fit final LASSO model using optimal lambda
+lasso_model <- glmnet(X, y, alpha = 1, lambda = best_lambda)
+
+# Extract feature coefficients
+lasso_coefficients <- coef(lasso_model)
+
+# Convert coefficients to a named vector
+lasso_coefficients <- as.vector(lasso_coefficients)
+names(lasso_coefficients) <- rownames(coef(lasso_model))
+
+# Print Intercept
+intercept <- lasso_coefficients["(Intercept)"]
+print(paste("Intercept:", intercept))
+
+# Print selected features and their coefficients
+selected_features <- lasso_coefficients[lasso_coefficients != 0]  # Non-zero coefficients
+print("Selected Features and Coefficients:")
+print(selected_features)
+
+# Compute RMSE using cross-validation
+predictions <- predict(lasso_model, X)  # Predict on training data
+rmse <- sqrt(mean((y - predictions)^2))  # RMSE calculation
+print(paste("RMSE:", rmse))
+
+# Compute R-squared
+ss_total <- sum((y - mean(y))^2)  # Total sum of squares
+ss_residual <- sum((y - predictions)^2)  # Residual sum of squares
+r_squared <- 1 - (ss_residual / ss_total)  # R-squared
+
+# Compute Adjusted R-squared
+n <- length(y)  # Number of observations
+p <- length(selected_features) - 1  # Number of selected predictors (excluding intercept)
+adj_r_squared <- 1 - ((1 - r_squared) * (n - 1) / (n - p - 1))
+
+print(paste("Adjusted R-squared:", adj_r_squared))
+
+```
