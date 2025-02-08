@@ -15,6 +15,9 @@ library(car)
 library(ggcorrplot)
 library(plyr)
 library(gridExtra)
+library(FNN)
+library(rgl)
+library(caret)
 
 knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
 ```
@@ -45,11 +48,6 @@ Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observ
 
 
 ### Visualizing Hospital Stay Distribution
-```{r}
-hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
-```
-We see some slight right skew for `Lgth.of.Sty`.
-
 
 ## Data Cleaning
 ```{r}
@@ -76,6 +74,11 @@ cleanDataLabels = c("Length of Stay",
                     "Number of nurses",
                     "Available facilities")
 ```
+```{r}
+hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
+```
+We see some slight right skew for `Lgth.of.Sty`.
+
 ## Initial Graphs
 ```{r}
 # correlation matrix
@@ -244,3 +247,53 @@ par(mfrow = c(1,1))
 summary(tempModel2)
 vif(tempModel2)
 ```
+```{r}
+train_control <- trainControl(method = "cv", number = 5)
+set.seed(1234)  # Set a seed for reproducibility
+knn_model <- train(
+  Lgth.of.Sty ~ .,                  # Formula: regress Lgth.of.Stay on all predictors
+  data = cleanData,         # Dataset containing only numeric predictors
+  method = "knn",              # Specify k-Nearest Neighbors as the model
+  trControl = train_control,   # 10-fold cross-validation
+  tuneGrid = expand.grid(k=c(1:10,20,30))  # Grid of k values to explore
+)
+
+print(knn_model)
+plot(knn_model)
+print(knn_model$bestTune)
+```
+When looking at all numeric predictors, the best k for RMSE is 30, however, we see that at k = 9, we also have quite a low RMSE as well.
+
+```{r}
+train_control <- trainControl(method = "cv", number = 5)
+set.seed(1234)  # Set a seed for reproducibility
+knn_model <- train(
+  Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + N.Beds + Med.Sc.Aff,                  # Formula: regress Lgth.of.Stay on predictors
+  data = cleanData,         # Dataset containing only numeric predictors
+  method = "knn",              # Specify k-Nearest Neighbors as the model
+  trControl = train_control,   # 10-fold cross-validation
+  tuneGrid = expand.grid(k=c(1:10,20,30))  # Grid of k values to explore
+)
+
+print(knn_model)
+plot(knn_model)
+print(knn_model$bestTune)
+```
+Similar to looking at all predictors, for the predictors our LASSO model chose, we see again that at k = 30, our RMSE is lowest, however, at k = 9 we have a low RMSE as well.
+
+```{r}
+train_control <- trainControl(method = "cv", number = 5)
+set.seed(1234)  # Set a seed for reproducibility
+knn_model <- train(
+  Lgth.of.Sty ~ Age + Inf.Risk + Region + Med.Sc.Aff, # Formula: regress Lgth.of.Stay on predictors
+  data = cleanData,         # Dataset containing only numeric predictors
+  method = "knn",              # Specify k-Nearest Neighbors as the model
+  trControl = train_control,   # 10-fold cross-validation
+  tuneGrid = expand.grid(k=c(1:10,20,30))  # Grid of k values to explore
+)
+
+print(knn_model)
+plot(knn_model)
+print(knn_model$bestTune)
+```
+Interestingly, for the predictors of Age, Inf.Risk, Med.Sc.Aff, and Region, k = 10 has the best RMSE.
