@@ -271,7 +271,7 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
 
-ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
+ggplot(long_data, aes(x = log(Value), y = Lgth.of.Sty)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "loess") +
   facet_wrap(~ Variable, scales = "free_x") +  # Auto-arrange subplots
