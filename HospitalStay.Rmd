@@ -252,29 +252,10 @@ ggcorrplot(log_lin_correlation_matrix, lab = TRUE, title = "Log-Linear")
 
 ### Length of Stay vs other continuous variables
 
-<<<<<<< HEAD
 ```{r plot-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
-=======
-```{r plot-len-stay-vs-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-plot_list <- list()
-
-idx <- 0
-for (i in c(2:6, 9:11)) {
-  idx <- idx + 1
-  cur_color <- ifelse(idx == 8, "red", base_palette[idx])
-  temp_plot <- ggplot(data = base_data, aes(x = base_data[, i], y = Lgth.of.Sty)) +
-    geom_point() +
-    geom_smooth(color = cur_color) +
-    ggtitle(paste0(base_data_labels[i], " vs Length of Stay")) +
-    xlab(base_data_labels[i]) +
-    ylab("Length of Stay (Days)") +
-    theme(legend.position = "none", plot.margin = unit(rep(0.5, 4), "cm"))
-  plot_list[[length(plot_list) + 1]] <- temp_plot
-}
->>>>>>> 02313935ab81360b780ebedf124bb60566e14204
 
 ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
   geom_point(alpha = 0.6) +
@@ -285,25 +266,7 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 
 ### Length of Stay vs Log of other continuous variables
 
-<<<<<<< HEAD
 ```{r plot-len-stay-vs-log-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-=======
-```{r plot-len-stay-vs-log-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-plot_list <- list()
-idx <- 0
-for (i in c(2:6, 9:11)) {
-  idx <- idx + 1
-  cur_color <- ifelse(idx == 8, "red", base_palette[idx])
-  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = Lgth.of.Sty)) +
-    geom_point() +
-    geom_smooth(color = cur_color) +
-    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
-    xlab(paste0("log ", base_data_labels[i])) +
-    ylab("Length of Stay (Days)") +
-    theme(legend.position = "none", plot.margin = unit(rep(0.25, 4), "cm"))
-  plot_list[[length(plot_list) + 1]] <- temp_plot
-}
->>>>>>> 02313935ab81360b780ebedf124bb60566e14204
 
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
@@ -318,7 +281,6 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 
 ### Log Length of Stay vs other continuous variables
 
-<<<<<<< HEAD
 ```{r plot-log-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 
@@ -341,25 +303,6 @@ ggplot(long_data, aes(x = log(Value), y = log(Lgth.of.Sty))) +
   ylab("Log Length of Stay (Days)") +
   theme_minimal() +
   theme(legend.position = "none")
-
-=======
-```{r plot-log-len-stay-vs-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-plot_list <- list()
-idx <- 0
-for (i in c(2:6, 9:11)) {
-  idx <- idx + 1
-  cur_color <- ifelse(idx == 8, "red", base_palette[idx])
-  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = log(Lgth.of.Sty))) +
-    geom_point() +
-    geom_smooth(color = cur_color) +
-    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
-    xlab(base_data_labels[i]) +
-    ylab("log Length of Stay (Days)") +
-    theme(legend.position = "none", plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
-  plot_list[[length(plot_list) + 1]] <- temp_plot
-}
-grid.arrange(grobs = plot_list, ncol = 2)
->>>>>>> 02313935ab81360b780ebedf124bb60566e14204
 ```
 
 ### Categorical vs Length of Stay
