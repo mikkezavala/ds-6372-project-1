@@ -8,8 +8,8 @@ date: "2025-01-29"
 output: 
   # word_document: default
   html_document:
-    toc: true
-    toc_float: true
+    toc: false
+    toc_float: 
     df_print: paged
 ---
 
@@ -23,9 +23,65 @@ library(car)
 library(ggcorrplot)
 library(glmnet)
 library(caret)
+library(RColorBrewer)
+library(plyr)
+library(dplyr)
+library(grid)
+library(gridExtra)
+library(DT)
 
-knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
-#rmarkdown::render('HospitalStay.Rmd', output_file = 'index.html')
+knitr::opts_chunk$set(
+  error = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center"
+)
+
+#' Global palette and theme
+base_palette <- brewer.pal(n = 8, name = "Dark2")
+scale_fill_discrete <- function(...) scale_fill_manual(values = base_palette, ...)
+scale_color_discrete <- function(...) scale_color_manual(values = base_palette, ...)
+theme_set(theme_minimal(base_size = 14))
+
+#' - Style rules
+#' Align to code style guide found at TidyVerse <a href='https://style.tidyverse.org/'>R Style Guide</a>
+#'
+#' - Publishing to Github Pages
+#' When ready to push the code please execute the knit command to generate an index.html and make sure is cleanup
+#'
+
+```
+
+```{r produce artifacts, include=FALSE, eval=FALSE, message=TRUE}
+#' Cleanups directories and will build the site
+#' into a html that github pages can render easily
+build_artifact <- function(in_file, out_file, clean_only = FALSE) {
+  html_files <- list.files(pattern = "\\.html$")
+  if (length(html_files) > 0) {
+    file.remove(html_files)
+    message("Removed HTML files: ", paste(html_files, collapse = ", "))
+  } else {
+    message("No HTML files found.")
+  }
+  
+  dirs_to_remove <- list.dirs(full.names = TRUE, recursive = FALSE)
+  dirs_to_remove <- dirs_to_remove[grepl("_files$", dirs_to_remove)]
+  
+  if (length(dirs_to_remove) > 0) {
+    unlink(dirs_to_remove, recursive = TRUE, force = TRUE)
+    message("Removed clutter directories: ", paste(dirs_to_remove, collapse = ", "))
+  } else {
+    message("No clutter directories found.")
+  }
+  
+  if(!clean_only) {
+    rmarkdown::render(in_file, output_file = out_file)
+    message("Rendering complete for: ", rmd_file)  
+  }
+  
+}
+
+build_artifact(in_file ="HospitalStay.Rmd", out_file = "index.html", clean_only = FALSE)
 ```
 
 # Hospital Stay
@@ -34,8 +90,8 @@ knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
 
 ### Import Data
 
-```{r}
-hospitalData <- read.csv("./project_hospitals.csv", header = TRUE)
+```{r data-load}
+hospital_data <- read.csv("./project_hospitals.csv", header = TRUE)
 ```
 
 ### Column Descriptions
@@ -66,41 +122,49 @@ hospitalData <- read.csv("./project_hospitals.csv", header = TRUE)
 
 #### Summary of the Data Set
 
-```{r}
-summary(hospitalData)
+```{r data-summary}
+summary(hospital_data)
 ```
 
-#### Finding empyt values
+#### Finding empty values
 
-```{r}
-colSums(is.na(hospitalData))
+```{r data-empty-cols}
+colSums(is.na(hospital_data))
 ```
 
 ##### Plot of missing data
 
-```{r}
-vis_miss(hospitalData)
+```{r data-viz-empty}
+vis_miss(hospital_data)
 ```
 
 Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observations of 12 variables. We have no missing values for any variable, thus we do not need to impute for any observations. Out of the 12 variables, one of them is an identifier variable `ID`, and will not be used for predicting. The patient's length of stay `Lgth.of.Sty` is the variable we would like to predict for. Therefor, we have 10 potential explanatory variables and 1 variable we are trying to predict for.
 
 ### Visualizing Hospital Stay Distribution
 
-```{r}
-hist(hospitalData$Lgth.of.Sty, xlab = "Lenght of Stay (Days)", main = "")
+```{r data-hist}
+ggplot(hospital_data, aes(x = Lgth.of.Sty, fill = factor(1))) +
+  geom_histogram(binwidth = 2, color = "black") +
+  labs(x = "Length of Stay (Days)", y = "Count", title = "") +
+  scale_fill_manual(values = base_palette[3]) +
+  guides(fill = "none")
 ```
 
 We see some slight right skew for Lgt.of.Sty
 
 ### Data Cleaning
 
-```{r}
-cleanData <- hospitalData |> select(-ID)
-# cleanData$RegionEncoded <- factor(cleanData$Region,
-#   levels = c(1, 2, 3, 4),
-#   labels = c("NE", "NC", "S", "W")
-# )
-cleanDataLabels <- c(
+```{r data-prepare-base-data}
+base_data <- hospital_data |> select(-ID)
+base_data$RegionRaw <- base_data$Region
+base_data$Region <- as.factor(base_data$Region) # convert Region from int to factor
+base_data$Med.Sc.Aff <- as.factor(base_data$Med.Sc.Aff) # convert Med.Sc.Aff from int to factor
+
+base_data$Region <- revalue(base_data$Region, c("1" = "NE", "2" = "NC", "3" = "S", "4" = "W"))
+base_data$Med.Sc.Aff <- revalue(base_data$Med.Sc.Aff, c("1" = "Yes", "2" = "No"))
+
+# labels for graphs
+base_data_labels <- c(
   "Length of Stay",
   "Age",
   "Infection Risk",
@@ -115,28 +179,32 @@ cleanDataLabels <- c(
 )
 ```
 
+#### Summary of the cleaned data
+
+```{r data-base-data-summary}
+summary(base_data) # sanity check
+```
+
 ### Initial Graphs
 
+### Correlation
 
-### Correlation 
-```{r}
-cor_matrix = cor(cleanData |> select(-Region))
-
-# corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+```{r corr-base-data}
 ggcorrplot(cor_matrix, lab = TRUE)
 ```
 
 Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
 
-```{r}
-pairs(cleanData |> select(-Region, -Med.Sc.Aff), panel = function(x, y) {
-  points(x, y, pch = 16, col = "blue")  # Scatter points
-  abline(lm(y ~ x), col = "red")  # Add trend line
-})
+```{r corr-plot-base-data fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
+ggpairs(base_data |> select(-Region, -Med.Sc.Aff),
+        lower = list(continuous = wrap("points", alpha = 0.5, color = base_palette[2])),
+        upper = list(continuous = wrap("cor", size = 4)),  
+        diag = list(continuous = wrap("densityDiag", fill = base_palette[4]))) +
+  theme_minimal()
 ```
 
-```{r}
-ggpairs(cleanData |> select(-Region, -Med.Sc.Aff), lower = list(continuous = wrap("smooth", method = "lm", color = "blue")), progress = FALSE)
+```{r pairs-plot-base-data  fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
+ggpairs(base_data, lower = list(continuous = wrap("smooth", method = "lm", color = "blue")))
 ```
 
 The variables Number of Beds, Average Patients, Average Nurses, and Percentage of service facilities; exhibit high intercorrelation, particularly between Number of Beds and Average Patients (0.981), which could introduce collinearity in a predictive model.
@@ -146,142 +214,176 @@ An important strong correlation that appears to be an important factor in hospit
 Both Culture Rate and Chest X-Ray Rate displays moderate correlation with Infection Risk; thhis suggests an intuitive relationship: as infection risk increases, more diagnostic tests are performed. Infection Risk may also serve as a useful predictor for Length of Stay, as higher infection risks could lead to prolonged hospital stays.
 
 ### Correlograms with Log Transformations
-```{r}
-corData <- cleanData %>% select(-Med.Sc.Aff, -Region)
-lin_logCorData <- log(corData)
-lin_logCorData$Lgth.of.Sty <- corData$Lgth.of.Sty
-log_linCorData <- corData %>% select(-Lgth.of.Sty)
-log_linCorData$logLgth.of.Sty <- log(corData$Lgth.of.Sty)
+
+```{r corr-data-log}
+cor_data <- base_data %>% select(-Med.Sc.Aff, -Region)
+lin_log_cor_data <- log(cor_data)
+lin_log_cor_data$Lgth.of.Sty <- cor_data$Lgth.of.Sty
+log_lincor_data <- cor_data %>% select(-Lgth.of.Sty)
+log_lincor_data$logLgth.of.Sty <- log(cor_data$Lgth.of.Sty)
 ```
 
 #### Linear-Linear Corr
-```{r}
-correlation_matrix <- cor(corData, method = "pearson")
+
+```{r corr-lin-lin-log}
+correlation_matrix <- cor(cor_data, method = "pearson")
 ggcorrplot(correlation_matrix, lab = TRUE, title = "Linear-Linear")
 ```
 
 #### Linear-Log Corr
-```{r}
-lin_log_correlation_matrix <- cor(lin_logCorData, method = "pearson")
+
+```{r corr-plot-lin-log}
+lin_log_correlation_matrix <- cor(lin_log_cor_data, method = "pearson")
 ggcorrplot(lin_log_correlation_matrix, lab = TRUE, title = "Linear-Log")
 ```
 
 #### Log-Linear Corr
-```{r}
-log_lin_correlation_matrix <- cor(log_linCorData, method = "pearson")
+
+```{r corr-plot-log-lin}
+log_lin_correlation_matrix <- cor(log_lincor_data, method = "pearson")
 ggcorrplot(log_lin_correlation_matrix, lab = TRUE, title = "Log-Linear")
 ```
 
-### Data Viz
-
-```{r}
-hist(cleanData$Lgth.of.Sty, xlab = "Length of Stay (Days)", main = "Histogram of Patient's Length of Stay")
-```
-
-We see some slight right skew for Lenght of Stay that could suggest
-
-#### Lenght of Stay vs. Infection Risk
-
-```{r}
-ggplot(cleanData, aes(y = Inf.Risk, x = Lgth.of.Sty)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "loess", se = FALSE, color = "blue") +
-  labs(title = "Length of Stay vs. Infection Risk")
-```
-
-We can spot two outliers around 17 and 20 when we analyze the relationship with Infection Risk those values would consider further analysis to understand the behavior.
-
-#### Lenght of Stay vs. Region
-```{r}
-ggplot(cleanData, aes(y = Lgth.of.Sty, x = Region)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Length of Stay vs. Region")
-```
-
-#### Lenght of Stay vs. Avg. Nurses
-```{r}
-ggplot(cleanData, aes(y = Lgth.of.Sty, x = Avg.Nur)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "loess", se = FALSE, color = "green") +
-  labs(title = "Length of Stay vs, Avg Number of Nurses")
-```
-
-We see an increase of infections at lower averages in the number of nurses, with a Plateu effect when reaching close to 200 in average and continuing the trend over 400.
-
-#### Lenght of Stay vs. Avg. Patiernts
-```{r}
-ggplot(cleanData, aes(y = Lgth.of.Sty, x = Avg.Pat)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "loess", se = FALSE, color = "purple") +
-  labs(title = "Length of Stay vs. Avg Patients")
-```
-
-#### Lenght of Stay vs. Avg. Number of Beds
-```{r}
-ggplot(cleanData, aes(y = Lgth.of.Sty, x = N.Beds)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "loess", se = FALSE, color = "brown") +
-  labs(title = "Length of Stay vs Avg. Number of Beds")
-```
-
-
 ### Length of Stay vs other continuous variables
-```{r}
+
+```{r plot-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+
+idx <- 0
 for (i in c(2:6, 9:11)) {
-  tempPlot <- ggplot(data = cleanData, aes(x = cleanData[, i], y = Lgth.of.Sty)) +
+  idx <- idx + 1
+  cur_color <- ifelse(idx == 8, "red", plot_colors[idx])
+  temp_plot <- ggplot(data = base_data, aes(x = base_data[, i], y = Lgth.of.Sty)) +
     geom_point() +
-    geom_smooth() +
-    ggtitle(paste0(cleanDataLabels[i], " vs Length of Stay")) +
-    xlab(cleanDataLabels[i]) +
+    geom_smooth(color = cur_color) +
+    ggtitle(paste0(base_data_labels[i], " vs Length of Stay")) +
+    xlab(base_data_labels[i]) +
     ylab("Length of Stay (Days)") +
-    theme(legend.position = "none")
-  print(tempPlot)
+    theme(legend.position = "none", plot.margin = unit(rep(0.5, 4), "cm"))
+  plot_list[[length(plot_list) + 1]] <- temp_plot
 }
+
+grid.arrange(grobs = plot_list, ncol = 2)
 ```
 
-### Length of Stay vs log of other continuous variables
-```{r}
+### Length of Stay vs Log of other continuous variables
+
+```{r plot-len-stay-vs-log-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+idx <- 0
 for (i in c(2:6, 9:11)) {
-  tempPlot <- ggplot(data = cleanData, aes(x = log(cleanData[, i]), y = Lgth.of.Sty)) +
+  idx <- idx + 1
+  cur_color <- ifelse(idx == 8, "red", plot_colors[idx])
+  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = Lgth.of.Sty)) +
     geom_point() +
-    geom_smooth() +
-    ggtitle(paste0("Log ", cleanDataLabels[i], " vs Length of Stay")) +
-    xlab(paste0("log ", cleanDataLabels[i])) +
+    geom_smooth(color = cur_color) +
+    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
+    xlab(paste0("log ", base_data_labels[i])) +
     ylab("Length of Stay (Days)") +
-    theme(legend.position = "none")
-  print(tempPlot)
+    theme(legend.position = "none", plot.margin = unit(rep(0.25, 4), "cm"))
+  plot_list[[length(plot_list) + 1]] <- temp_plot
 }
+
+grid.arrange(grobs = plot_list, ncol = 2)
 ```
 
-### log Length of Stay vs other continuous variables
-```{r}
-for (i in c(2:6,9:11)) {
-  tempPlot = ggplot(data=cleanData,aes(x=log(cleanData[,i]),y=log(Lgth.of.Sty))) +
+### Log Length of Stay vs other continuous variables
+
+```{r plot-log-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+idx <- 0
+for (i in c(2:6, 9:11)) {
+  idx <- idx + 1
+  cur_color <- ifelse(idx == 8, "red", plot_colors[idx])
+  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = log(Lgth.of.Sty))) +
     geom_point() +
-    geom_smooth() +
-    ggtitle(paste0("Log ", cleanDataLabels[i]," vs Length of Stay")) +
-    xlab(cleanDataLabels[i]) +
+    geom_smooth(color = cur_color) +
+    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
+    xlab(base_data_labels[i]) +
     ylab("log Length of Stay (Days)") +
-    theme(legend.position = "none")
-  print(tempPlot)
+    theme(legend.position = "none", plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
+  plot_list[[length(plot_list) + 1]] <- temp_plot
 }
+grid.arrange(grobs = plot_list, ncol = 2)
+```
+
+### Categorical vs Length of Stay
+
+```{r out.width="100%", fig.align="center"}
+region_patient <- ggplot(data = base_data, aes(x = Region, y = Lgth.of.Sty, colour = Med.Sc.Aff)) +
+  geom_boxplot() +
+  ggtitle("Region vs Patient Length of Stay", "Grouped by Medical School Affiliation")
+
+med_assoc <- ggplot(data = base_data, aes(x = Med.Sc.Aff, y = Lgth.of.Sty, colour = Region)) +
+  geom_boxplot() +
+  ggtitle("Med. School Aff. vs Pat, Length of Stay", "Grouped by Region")
+
+grid.arrange(grobs = list(med_assoc, region_patient), ncol = 2)
+```
+
+By looking at the distributions (via the boxplots), we can see that there are some differences between a patient's length of stay if we group by Region (or by Medical School Affiliation).
+
+**If grouping by Medical school affiliation:** Length of stay between the regions is fairly similar on average if there is an affiliation for medical school, but the distributions are much more different between the regions. If there is no affiliation, then the distributions are a bit more similar, but the averages are different between each region.
+
+**If grouping by Region:** Length of stay on average tends to be similar between the regions (being slightly less in the W and S regions) with NE having a wider distribution of length of stay. Interesting to note that medical school affiliation tends to have lower length of stay if the affiliation is none.
+
+### Continuous grouped by Categorical vs Length of Stay
+
+```{r fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+indexes <- c(2:6, 9:11)
+for (i in seq_along(indexes)) {
+  x_var <- names(base_data)[indexes[i]]
+
+  temp_plot <- ggplot(data = base_data, aes_string(x = x_var, y = "Lgth.of.Sty", color = "Region")) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0(base_data_labels[i], " vs Length of Stay"), "Grouped by Region") +
+    xlab(base_data_labels[i]) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "right")
+  plot_list[[length(plot_list) + 1]] <- temp_plot
+}
+
+grid.arrange(grobs = plot_list, ncol = 2)
+```
+
+#### Grouped by Medical School Affiliation
+
+```{r   fig.width=12, fig.height=10, out.width="100%", fig.align="center"}
+plot_list <- list()
+indexes <- c(2:6, 9:11)
+for (i in seq_along(indexes)) {
+  x_var <- names(base_data)[indexes[i]]
+
+  temp_plot <- ggplot(data = base_data, aes_string(x = x_var, y = "Lgth.of.Sty", color = "Med.Sc.Aff")) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle(paste0(base_data_labels[i], " vs Length of Stay"), "Grouped by Medical School Affiliation") +
+    xlab(base_data_labels[i]) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "right")
+  plot_list[[length(plot_list) + 1]] <- temp_plot
+}
+
+grid.arrange(grobs = plot_list, ncol = 2)
 ```
 
 ## Objective 1
 
-```{r}
-allVarsModel = lm(Lgth.of.Sty ~ ., data = cleanData)
+```{r all variables model}
+all_vars_model = lm(Lgth.of.Sty ~ . - RegionRaw, data = base_data)
 par(mfrow = c(2,2))
-plot(allVarsModel)
+plot(all_vars_model)
 ```
 
 ### All Variables Model Sumary
+
 ```{r}
-summary(allVarsModel)
+summary(all_vars_model)
 ```
 
-The diagnostic plots suggest the linear model fits reasonably well. 
+The diagnostic plots suggest the linear model fits reasonably well.
 
 The Residuals vs. Fitted and Scale-Location plots show residuals scattered around zero, with no strong signs of nonlinearity or heteroskedasticity. However, Observation 47 stands out, showing a large residual across multiple plots. In the Q–Q plot, most points follow the regression line, but Observation 47 appears on the right tail, deviating from normality.
 
@@ -289,61 +391,207 @@ Leverage diagnostics indicate that most data points are well-standardized around
 
 No major assumption violations are evident, but examining these observations could help assess model robustness.
 
-
 ### Variable Inflation
 
 ```{r}
-vif(allVarsModel)
+vif(all_vars_model)
 ```
 
 Number of Beds and Average Patients have *extremely* high VIFs, suggesting high multicollinearity. This makes sense, as the more room a hospital has (number of beds) then the more patients they can have on average. Average number of full time nurses has potential collinearity as well, which also makes sense as a hospital with more beds will likely have more nursing staff to take care of the patients.
 
+### Model Explorations
+
+#### Linear Model
+
+```{r}
+test_model <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
+test_model_fit <- lm(test_model, data = base_data |> select(-RegionRaw))
+
+par(mfrow = c(2,2))
+plot(test_model_fit)
+par(mfrow = c(1,1))
+```
+
+In comparing the first model (all variables model) and this model, the residuals vs. fitted plot now shows points more evenly scattered around the reference line, indicating fewer systematic patterns in the residuals and a flatter loess curve.
+
+The Q–Q plot remains largely linear, though observations such as #47 and #112 still appear in the right tail, suggesting they continue to exert some influence.
+
+The scale–location plot demonstrates that the spread of residuals has become more consistent across fitted values, with a flatter red line that signals more homoscedasticity than before.
+
+The residuals vs. leverage plot, #47 no longer rises as close to the typical Cook’s distance threshold, while #112 has shifted from being primarily a high‐leverage point to one with a moderately large residual—though neither appears as influential as in the initial model.
+
+##### Model Summary
+
+```{r}
+summary(test_model_fit)
+```
+
+```{r}
+vif(test_model_fit)
+```
+
+#### Observation #47 and #112 high residuals
+
+```{r}
+numeric_data <- base_data |> select(where(is.numeric), -RegionRaw)
+stats <- numeric_data |>
+  dplyr::summarise(
+    dplyr::across(
+      .cols = everything(),
+      .fns = list(
+        mean   = ~ mean(.x, na.rm = TRUE),
+        median = ~ median(.x, na.rm = TRUE)
+      )
+    )
+  ) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = c("variable", ".value"),
+    names_pattern = "(.*)_(mean|median)"
+  )
+
+outliers_diff <- numeric_data[c(47, 112), ] |>
+  as_tibble(rownames = "obs_id") %>%
+  pivot_longer(
+    cols = -obs_id,
+    names_to = "variable",
+    values_to = "value"
+  ) |>
+  left_join(stats, by = "variable") |>
+  dplyr::mutate(
+    diff_from_mean = value - mean,
+    diff_from_median = value - median
+  )
+
+final_table <- outliers_diff |>
+  pivot_wider(
+    id_cols = c(variable, mean, median),
+    names_from = obs_id,
+    values_from = c(value, diff_from_mean, diff_from_median)
+  ) |>
+  dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 3))) |>
+  dplyr::rename(
+    "#47 Value" = value_47,
+    "#47 Mean Distance" = diff_from_mean_47,
+    "#47 Median Distance" = diff_from_median_47,
+    "#112 Value" = value_112,
+    "#112 Mean Distance" = diff_from_mean_112,
+    "#112 Median Distance" = diff_from_median_112,
+  ) |>
+  dplyr::select(
+    variable, mean, median,
+    `#112 Value`, `#47 Value`, `#112 Mean Distance`, `#47 Mean Distance`, `#112 Median Distance`, `#47 Median Distance`,
+  )
+
+datatable(final_table, options = list(dom = "t", width = "100%", scrollX = TRUE))
+```
+
+##### Linear Model without outliers
+
+```{r}
+test_model_remove <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
+test_model_remove_fit <- lm(test_model_remove, data = base_data[c(-112, -47), ] |> select(-RegionRaw))
+
+par(mfrow = c(2,2))
+plot(test_model_remove_fit)
+par(mfrow = c(1,1))
+```
+
+After removing observations #47 and #112, the model's residual diagnostics show notable improvements.
+
+Residuals vs. Fitted plot indicates a reduction in heteroscedasticity, as the variance of residuals is now more evenly spread with less curvature in the trend.
+
+The Q-Q plot aligns more closely with the normal distribution, suggesting an improvement in the normality assumption, as the extreme deviations from #47 and #112 are no longer distorting the distribution.
+
+In the Scale-Location plot, variance appears more stable, reinforcing the improved homoscedasticity.
+
+Finally, the Residuals vs. Leverage plot confirms that these observations had high leverage and strong influence on model coefficients, as their removal results in a more balanced distribution of leverage across data points.
+
+```{r}
+summary(test_model_remove_fit)
+```
+
+```{r}
+vif(test_model_remove_fit)
+```
+
+#### Performance comparision after removing outliers
+
+```{r}
+rmse <- function(actual, predicted) {
+  sqrt(mean((actual - predicted)^2))
+}
+
+predictions_before <- predict(test_model_fit, base_data)
+rmse_before <- RMSE(predictions_before, base_data$Lgth.of.Sty)
+
+predictions_after <- predict(test_model_remove_fit, base_data[c(-112, -47), ])
+rmse_after <- RMSE(predictions_after, base_data_filtered$Lgth.of.Sty)
+
+sprintf("RMSE without removing = %.3f -- RMSE without 112 and 47 = %.3f", rmse_before, rmse_after)
+```
+
+The reduction in RMSE from 1.295 to 0.966 after removing observations 47 and 112 suggests that these points were contributing to higher model error. Their removal improves the model’s predictive accuracy, indicating that it generalizes better to new data and produces more reliable estimates
+
+Additionally by removing highly correlated variables such as Number of Beds and Average Patients, we’ve substantially lowered variance inflation. This indicates that our changes have mitigated multicollinearity and improved the stability and interpretability of the model.
+
+### Exploring Interaction
+
+#### Prepare data for section
+
+```{r}
+interaction_data <- base_data[c(-112, -47), ]
+```
+
+#### Length of Stay vs Infection Risk by Region Interaction
 
 ```{r Length of Stay vs Infection Risk by Region}
+interaction_data$RegionAsFactor <- factor(
+  interaction_data$RegionRaw,
+  levels = c(1, 2, 3, 4),
+  labels = c("NE", "NC", "S", "W")
+)
 
-## Interaction Exploration
-cleanData$RegionAsFactor <- factor(cleanData$Region, levels = c(1, 2, 3, 4), labels = c("NE", "NC", "S", "W"))
-ggplot(cleanData, aes(x = Inf.Risk, y = Lgth.of.Sty, color = RegionAsFactor)) +
+ggplot(interaction_data, aes(x = Inf.Risk, y = Lgth.of.Sty, color = RegionAsFactor)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE) +
   ggtitle("Length of Stay vs Infection Risk by Region") +
-  scale_color_manual(values = c("red", "blue", "green", "purple")) +
+  scale_color_brewer(palette = "Dark2", name = "Region") +
   labs(color = "Region")
 ```
 
-### Length of Stay vs Infection Risk by Region Interaction Observations:
-
-NE (Red) shows the steepest slope: Infection risk has a stronger impact on Length of Stay in Northeast hospitals compared to other regions.However, the NE region has more high outliers. 
-NC (Blue) and S (Green) have moderate slopes, suggesting that infection risk moderately influences hospital stay duration in these regions.
-W (Purple) appears almost flat, low variance. This may indicate that in Western hospitals, infection risk has little to no impact on length of stay.
+NE (Green) shows the steepest slope: Infection risk has a stronger impact on Length of Stay in Northeast hospitals compared to other regions.However, the NE region has more high outliers. NC (Blue) and S (Green) have moderate slopes, suggesting that infection risk moderately influences hospital stay duration in these regions. W (Purple) appears almost flat, low variance. This may indicate that in Western hospitals, infection risk has little to no impact on length of stay.
 
 ### Anova Model - Fit ANOVA model with interaction effect
+
 ```{r}
-anova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data = cleanData)
+anova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data = interaction_data)
 summary(anova_model)
 ```
 
 #### ANOVA test for significance of interaction terms
+
 ```{r}
 anova(anova_model)
 ```
 
-#### # Checking Variance Inflation Factor (VIF) for multicollinearity
+#### Checking Variance Inflation Factor (VIF) for multicollinearity
+
 ```{r}
 vif(anova_model)
 ```
 
-Interpretations: 
+Interpretations:
 
-- A one-unit increase in infection risk leads to an increase of ~1.35 days in hospital stay (in the baseline NE region). This is highly statistically significant, suggesting infection risk is a key predictor of length of stay.
+-   A one-unit increase in infection risk leads to an increase of \~$0.91$ days in hospital stay (in the baseline NE region). This is highly statistically significant, suggesting infection risk is a key predictor of length of stay.
 
 Patients in North Central hospitals stay approximately 3.02 days longer than those in the Northeast on average, with a statistically significant result. Similarly, patients in Southern hospitals have an average stay that is about 2.59 days longer than in the Northeast, also showing statistical significance. In the Western region, the average length of stay is around 3.5 days longer than in the Northeast; however, this result is only marginally significant.
 
 ```{r}
 
 # Prepare data: Separate predictors (X) and target variable (y)
-X <- as.matrix(cleanData[, -which(names(cleanData) == "Lgth.of.Sty")])  # Convert predictors to matrix
-y <- cleanData$Lgth.of.Sty  # Target variable
+X <- as.matrix(interaction_data[, -which(names(interaction_data) == "Lgth.of.Sty")])  # Convert predictors to matrix
+y <- interaction_data$Lgth.of.Sty  # Target variable
 
 # Perform LASSO regression with cross-validation
 cv_lasso <- cv.glmnet(X, y, alpha = 1, nfolds = 10)  # alpha = 1 for LASSO
@@ -390,5 +638,30 @@ p <- length(selected_features) - 1  # Number of selected predictors (excluding i
 adj_r_squared <- 1 - ((1 - r_squared) * (n - 1) / (n - p - 1))
 
 print(paste("Adjusted R-squared:", adj_r_squared))
+# base_data %>% count(base_data$RegionAsFactor) %>% mutate(percentage = n / sum(n) * 100)
+```
 
+## Objective 2
+
+### Prepare data
+
+After analyzing outliers we are going ahead to work without both outliers (observations 47 and 112)
+
+```{r}
+origCleaned <- base_data
+cleaned_obj_2 <- base_data[c(-112, -47), ]
+```
+
+### KNN Model - Non-Paramatric
+
+```{r}
+
+knn = lm(Lgth.of.Sty ~ Age + Inf.Risk + Med.Sc.Aff + Region, data = cleaned_obj_2)
+
+par(mfrow = c(2,2))
+plot(tempModel2)
+par(mfrow = c(1,1))
+
+summary(tempModel2)
+vif(tempModel2)
 ```
