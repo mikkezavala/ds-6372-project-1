@@ -316,7 +316,7 @@ med_assoc <- ggplot(data = base_data, aes(x = Med.Sc.Aff, y = Lgth.of.Sty, colou
   geom_boxplot() +
   ggtitle("Med. School Aff. vs Pat, Length of Stay", "Grouped by Region")
 
-grid.arrange(grobs = list(med_assoc, region_patient), ncol = 2)
+grid.arrange(grobs = list(med_assoc, region_patient), ncol = 1)
 ```
 
 By looking at the distributions (via the boxplots), we can see that there are some differences between a patient's length of stay if we group by Region (or by Medical School Affiliation).
