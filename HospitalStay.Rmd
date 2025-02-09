@@ -14,22 +14,6 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(ggplot2)
-library(visdat)
-library(tidyverse)
-library(corrplot)
-library(GGally)
-library(car)
-library(ggcorrplot)
-library(glmnet)
-library(caret)
-library(RColorBrewer)
-library(plyr)
-library(dplyr)
-library(grid)
-library(gridExtra)
-library(DT)
-
 knitr::opts_chunk$set(
   error = FALSE,
   warning = FALSE,
@@ -37,6 +21,28 @@ knitr::opts_chunk$set(
   fig.align = "center"
 )
 
+```
+
+```{r load_required_packages, include=FALSE}
+# List of required packages
+required_packages <- c(
+  "ggplot2", "visdat", "tidyverse", "corrplot", "GGally", "car", 
+  "ggcorrplot", "glmnet", "caret", "RColorBrewer", "plyr", 
+  "dplyr", "grid", "gridExtra", "DT", "tidyr", "RColorBrewer"
+)
+
+# Check and install missing packages
+missing_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages, dependencies = TRUE)
+}
+
+# Load all required libraries
+lapply(required_packages, library, character.only = TRUE)
+
+```
+
+```{r defaults}
 #' Global palette and theme
 base_palette <- brewer.pal(n = 8, name = "Dark2")
 scale_fill_discrete <- function(...) scale_fill_manual(values = base_palette, ...)
@@ -247,64 +253,57 @@ ggcorrplot(log_lin_correlation_matrix, lab = TRUE, title = "Log-Linear")
 ### Length of Stay vs other continuous variables
 
 ```{r plot-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-plot_list <- list()
 
-idx <- 0
-for (i in c(2:6, 9:11)) {
-  idx <- idx + 1
-  cur_color <- ifelse(idx == 8, "red", plot_colors[idx])
-  temp_plot <- ggplot(data = base_data, aes(x = base_data[, i], y = Lgth.of.Sty)) +
-    geom_point() +
-    geom_smooth(color = cur_color) +
-    ggtitle(paste0(base_data_labels[i], " vs Length of Stay")) +
-    xlab(base_data_labels[i]) +
-    ylab("Length of Stay (Days)") +
-    theme(legend.position = "none", plot.margin = unit(rep(0.5, 4), "cm"))
-  plot_list[[length(plot_list) + 1]] <- temp_plot
-}
+long_data <- base_data %>%
+  pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
 
-grid.arrange(grobs = plot_list, ncol = 2)
+ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess") +
+  facet_wrap(~ Variable, scales = "free_x") +  # Auto-arrange subplots
+  theme_minimal()
 ```
 
 ### Length of Stay vs Log of other continuous variables
 
 ```{r plot-len-stay-vs-log-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-plot_list <- list()
-idx <- 0
-for (i in c(2:6, 9:11)) {
-  idx <- idx + 1
-  cur_color <- ifelse(idx == 8, "red", plot_colors[idx])
-  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = Lgth.of.Sty)) +
-    geom_point() +
-    geom_smooth(color = cur_color) +
-    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
-    xlab(paste0("log ", base_data_labels[i])) +
-    ylab("Length of Stay (Days)") +
-    theme(legend.position = "none", plot.margin = unit(rep(0.25, 4), "cm"))
-  plot_list[[length(plot_list) + 1]] <- temp_plot
-}
 
-grid.arrange(grobs = plot_list, ncol = 2)
+long_data <- base_data %>%
+  pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
+
+ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess") +
+  facet_wrap(~ Variable, scales = "free_x") +  # Auto-arrange subplots
+  theme_minimal()
+
 ```
 
 ### Log Length of Stay vs other continuous variables
 
 ```{r plot-log-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
-plot_list <- list()
-idx <- 0
-for (i in c(2:6, 9:11)) {
-  idx <- idx + 1
-  cur_color <- ifelse(idx == 8, "red", plot_colors[idx])
-  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = log(Lgth.of.Sty))) +
-    geom_point() +
-    geom_smooth(color = cur_color) +
-    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
-    xlab(base_data_labels[i]) +
-    ylab("log Length of Stay (Days)") +
-    theme(legend.position = "none", plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
-  plot_list[[length(plot_list) + 1]] <- temp_plot
-}
-grid.arrange(grobs = plot_list, ncol = 2)
+
+
+# Define color palette
+plot_colors <- RColorBrewer::brewer.pal(n = 16, name = "Set2")
+
+# Convert data to long format for faceting
+long_data <- base_data %>%
+  pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value") %>%
+  filter(Value > 0, Lgth.of.Sty > 0)  # Remove zero or negative values
+
+# Create the faceted ggplot
+ggplot(long_data, aes(x = log(Value), y = log(Lgth.of.Sty))) +
+  geom_point(alpha = 0.6, aes(color = Variable)) +  # Color points by variable
+  geom_smooth(method = "loess", se = FALSE, aes(color = Variable)) +  # Fit smoothing curve
+  scale_color_manual(values = plot_colors) +  # Apply manual color mapping
+  facet_wrap(~ Variable, scales = "free_x") +  # Create faceted plots
+  ggtitle("Log-Transformed Variables vs Log Length of Stay") +
+  xlab("Log Predictor Variables") +
+  ylab("Log Length of Stay (Days)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 ```
 
 ### Categorical vs Length of Stay
