@@ -188,7 +188,7 @@ base_data_labels <- c(
 #### Summary of the cleaned data
 
 ```{r data-base-data-summary}
-summary(base_data) # sanity check
+summary(base_data)
 ```
 
 ### Initial Graphs
@@ -204,8 +204,8 @@ Length of Stay correlated more strongly with: + Infection Risk, + Average Patien
 
 ```{r corr-plot-base-data, fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
 pairs(base_data |> select(-Region, -Med.Sc.Aff), panel = function(x, y) {
-  points(x, y, pch = 16, col = "blue")  # Scatter points
-  abline(lm(y ~ x), col = "red")  # Add trend line
+  points(x, y, pch = 16, col = "blue")
+  abline(lm(y ~ x), col = "red")
 })
 ```
 
@@ -260,7 +260,7 @@ long_data <- base_data %>%
 ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "loess") +
-  facet_wrap(~ Variable, scales = "free_x") +  # Auto-arrange subplots
+  facet_wrap(~ Variable, scales = "free_x") +
   theme_minimal()
 ```
 
@@ -274,7 +274,7 @@ long_data <- base_data %>%
 ggplot(long_data, aes(x = log(Value), y = Lgth.of.Sty)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "loess") +
-  facet_wrap(~ Variable, scales = "free_x") +  # Auto-arrange subplots
+  facet_wrap(~ Variable, scales = "free_x") +
   theme_minimal()
 
 ```
@@ -290,14 +290,14 @@ plot_colors <- RColorBrewer::brewer.pal(n = 16, name = "Set2")
 # Convert data to long format for faceting
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value") %>%
-  filter(Value > 0, Lgth.of.Sty > 0)  # Remove zero or negative values
+  filter(Value > 0, Lgth.of.Sty > 0)
 
 # Create the faceted ggplot
 ggplot(long_data, aes(x = log(Value), y = log(Lgth.of.Sty))) +
-  geom_point(alpha = 0.6, aes(color = Variable)) +  # Color points by variable
-  geom_smooth(method = "loess", se = FALSE, aes(color = Variable)) +  # Fit smoothing curve
-  scale_color_manual(values = plot_colors) +  # Apply manual color mapping
-  facet_wrap(~ Variable, scales = "free_x") +  # Create faceted plots
+  geom_point(alpha = 0.6, aes(color = Variable)) +
+  geom_smooth(method = "loess", se = FALSE, aes(color = Variable)) +
+  scale_color_manual(values = plot_colors) +
+  facet_wrap(~ Variable, scales = "free_x") +
   ggtitle("Log-Transformed Variables vs Log Length of Stay") +
   xlab("Log Predictor Variables") +
   ylab("Log Length of Stay (Days)") +
@@ -521,19 +521,18 @@ rmse <- function(actual, predicted) {
 }
 
 predictions_before <- predict(test_model_fit, base_data)
-rmse_before <- RMSE(predictions_before, base_data$Lgth.of.Sty)
+rmse_lm_before <- RMSE(predictions_before, base_data$Lgth.of.Sty)
 
 base_data_filtered <- base_data[c(-112, -47), ]
 predictions_after <- predict(test_model_remove_fit, base_data_filtered)
-rmse_after <- RMSE(predictions_after, base_data_filtered$Lgth.of.Sty)
+rmse_lm_after <- RMSE(predictions_after, base_data_filtered$Lgth.of.Sty)
 
-sprintf("RMSE without removing = %.3f -- RMSE without 112 and 47 = %.3f", rmse_before, rmse_after)
+sprintf("RMSE without removing = %.3f -- RMSE without 112 and 47 = %.3f", rmse_lm_before, rmse_lm_after)
 ```
 
 The reduction in RMSE from 1.295 to 0.966 after removing observations 47 and 112 suggests that these points were contributing to higher model error. Their removal improves the model’s predictive accuracy, indicating that it generalizes better to new data and produces more reliable estimates
 
 Additionally by removing highly correlated variables such as Number of Beds and Average Patients, we’ve substantially lowered variance inflation. This indicates that our changes have mitigated multicollinearity and improved the stability and interpretability of the model.
-
 
 #### Prepare data for section
 
@@ -559,38 +558,47 @@ anova_results <- anova(anova_model)
 ```{r anova-model-vif}
 vif(anova_model)
 ```
+
 High VIF values: N.Beds (36.77), Avg.Pat (43.28), and Avg.Nur (8.34). Suggesting multicollinearity is a concern for these variables.
 
 ```{r}
 mse <- anova_results["Residuals", "Mean Sq"]
-rmse <- sqrt(mse)
-sprintf("Anova RMSE %.3f", rmse)
+rmse_anova <- sqrt(mse)
+sprintf("Anova RMSE %.3f", rmse_anova)
 ```
 
 Interpretations:
 
-The ANOVA model indicates that significant predictors of Length of Stay (Lgth.of.Sty) include Age (p = 0.0148), where a 1 year increase is associated with a 0.0578-day increase, and Infection Risk (p = 0.0001), significantly increasing the length of stay. Regional differences also play a role, with patients in the NC region staying 0.586 days less (p = 0.0446), those in the South staying 0.870 days less (p = 0.0034), and those in the West experiencing the greatest reduction of 1.892 days (p < 0.001). On the other hand, several predictors, including R.Cul.Rat, R.CX.ray.Rat, N.Beds, Med.Sc.AffNo, Avg.Pat, Avg.Nur, and Pct.Ser.Fac, do not significantly impact the length of stay (p > 0.05), suggesting that they may not be strong predictors and may need to be removed from the model.
+The ANOVA model indicates that significant predictors of Length of Stay (Lgth.of.Sty) include Age (p = 0.0148), where a 1 year increase is associated with a 0.0578-day increase, and Infection Risk (p = 0.0001), significantly increasing the length of stay. Regional differences also play a role, with patients in the NC region staying 0.586 days less (p = 0.0446), those in the South staying 0.870 days less (p = 0.0034), and those in the West experiencing the greatest reduction of 1.892 days (p \< 0.001). On the other hand, several predictors, including R.Cul.Rat, R.CX.ray.Rat, N.Beds, Med.Sc.AffNo, Avg.Pat, Avg.Nur, and Pct.Ser.Fac, do not significantly impact the length of stay (p \> 0.05), suggesting that they may not be strong predictors and may need to be removed from the model.
+
+### LASSO Model
 
 ```{r lasso-model}
 
-lasso_data <- interaction_data
 # Prepare data: Separate predictors (X) and target variable (y)
-X <- as.matrix(lasso_data[, -which(names(lasso_data) == "Lgth.of.Sty")])  # Convert predictors to matrix
-y <- interaction_data$Lgth.of.Sty  # Target variable
+X <- model.matrix(Lgth.of.Sty ~ . - 1, data = interaction_data)
+y <- interaction_data$Lgth.of.Sty
 
 # Perform LASSO regression with cross-validation
-cv_lasso <- cv.glmnet(X, y, alpha = 1, nfolds = 10)  # alpha = 1 for LASSO
+cv_lasso <- cv.glmnet(X, y, alpha = 1, nfolds = 10)
 
 # Plot cross-validation results
 plot(cv_lasso)
+```
 
+#### Optimal $\lambda$
+
+```{r lasso-model-optimal-lambda}
 # Find the optimal lambda (penalty parameter)
 best_lambda <- cv_lasso$lambda.min
-print(paste("Optimal lambda:", best_lambda))
+sprintf("Optimal λ: %.5f", best_lambda)
+```
 
+#### LASSO Fit
+
+```{r lasso-model-fit}
 # Fit final LASSO model using optimal lambda
 lasso_model <- glmnet(X, y, alpha = 1, lambda = best_lambda)
-
 # Extract feature coefficients
 lasso_coefficients <- coef(lasso_model)
 
@@ -600,30 +608,38 @@ names(lasso_coefficients) <- rownames(coef(lasso_model))
 
 # Print Intercept
 intercept <- lasso_coefficients["(Intercept)"]
-print(paste("Intercept:", intercept))
+sprintf("Intercept: %.3f", intercept)
+```
 
+#### Features and Coefficients Selected
+
+```{r lasso-model-feats}
 # Print selected features and their coefficients
-selected_features <- lasso_coefficients[lasso_coefficients != 0]  # Non-zero coefficients
-print("Selected Features and Coefficients:")
-print(selected_features)
+selected_features <- lasso_coefficients[lasso_coefficients != 0]
+lasso_table <- tibble(
+  Feature = names(selected_features),
+  Coefficient = round(selected_features, 3)  # Round to 3 decimals for readability
+)
 
+lasso_table
+```
+
+```{r lasso-model-pred}
 # Compute RMSE using cross-validation
-predictions <- predict(lasso_model, X)  # Predict on training data
-rmse <- sqrt(mean((y - predictions)^2))  # RMSE calculation
-print(paste("RMSE:", rmse))
+predictions <- predict(lasso_model, X)
+rmse_lasso <- sqrt(mean((y - predictions)^2))
 
 # Compute R-squared
-ss_total <- sum((y - mean(y))^2)  # Total sum of squares
-ss_residual <- sum((y - predictions)^2)  # Residual sum of squares
-r_squared <- 1 - (ss_residual / ss_total)  # R-squared
+ss_total <- sum((y - mean(y))^2)
+ss_residual <- sum((y - predictions)^2)
+r_squared <- 1 - (ss_residual / ss_total)
 
 # Compute Adjusted R-squared
-n <- length(y)  # Number of observations
-p <- length(selected_features) - 1  # Number of selected predictors (excluding intercept)
+n <- length(y)
+p <- length(selected_features) - 1
 adj_r_squared <- 1 - ((1 - r_squared) * (n - 1) / (n - p - 1))
 
-print(paste("Adjusted R-squared:", adj_r_squared))
-# base_data %>% count(base_data$RegionAsFactor) %>% mutate(percentage = n / sum(n) * 100)
+sprintf("RMSE %.3f | Adjusted R-squared: %.3f with optimal λ: %.5f", rmse_lasso, adj_r_squared, best_lambda)
 ```
 
 ## Objective 2
@@ -633,19 +649,18 @@ print(paste("Adjusted R-squared:", adj_r_squared))
 After analyzing outliers we are going ahead to work without both outliers (observations 47 and 112)
 
 ```{r model-obj-two-data-clean}
-origCleaned <- base_data
 cleaned_obj_2 <- base_data[c(-112, -47), ]
 ```
 
 ### KNN Model - Non-Paramatric
 
-
 #### KNN All Variables
+
 ```{r model-obj-two-knn-all-vars}
 set.seed(1234)
 train_control <- trainControl(method = "cv", number = 5)
 
-knn_model <- train(
+knn_all_model <- train(
   Lgth.of.Sty ~ .,
   data = cleaned_obj_2,
   method = "knn",
@@ -653,20 +668,23 @@ knn_model <- train(
   tuneGrid = expand.grid(k = c(1:10, 20, 30))
 )
 
-print(knn_model)
+print(knn_all_model)
 ```
 
 ##### KNN Tune Plot
+
 ```{r model-obj-two-knn-all-vars-plot}
-plot(knn_model)
+plot(knn_all_model)
 ```
 
 ##### KNN Best Tune
+
 ```{r model-obj-two-knn-all-vars-best-tune}
-knn_results <- knn_model$results
-best_k <- knn_model$bestTune$k
-best_mse <- min(knn_results$RMSE^2)
-sprintf("Best k: %d, Best MSE: %.3f", best_k, best_mse)
+knn_results <- knn_all_model$results
+best_k <- knn_all_model$bestTune$k
+rmse_knn_all <- knn_results$RMSE[knn_results$k == best_k]
+
+sprintf("Best k: %d, Best MSE: %.3f", best_k, rmse_knn_all)
 ```
 
 When looking at all numeric predictors, the best k for RMSE is 30, however, we see that at k = 9, we also have quite a low RMSE as well.
@@ -676,7 +694,7 @@ When looking at all numeric predictors, the best k for RMSE is 30, however, we s
 ```{r model-obj-two-knn-couple-vars-v1}
 set.seed(1234)
 train_control <- trainControl(method = "cv", number = 5)
-knn_model <- train(
+knn_v1_model <- train(
   Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + N.Beds + Med.Sc.Aff,
   data = cleaned_obj_2,
   method = "knn",
@@ -684,22 +702,23 @@ knn_model <- train(
   tuneGrid = expand.grid(k = c(1:10, 20, 30))
 )
 
-print(knn_model)
+print(knn_v1_model)
 ```
 
 ##### KNN Tune Plot
 
 ```{r model-obj-two-knn-couple-vars-v1-plot}
-plot(knn_model)
+plot(knn_v1_model)
 ```
 
 ##### KNN Best Tune
 
 ```{r model-obj-two-knn-couple-vars-v1-best-tune}
-knn_results <- knn_model$results
-best_k <- knn_model$bestTune$k
-best_mse <- min(knn_results$RMSE^2)
-sprintf("Best k: %d, Best MSE: %.3f", best_k, best_mse)
+knn_results <- knn_v1_model$results
+best_k <- knn_v1_model$bestTune$k
+rmse_knn_v1 <- knn_results$RMSE[knn_results$k == best_k]
+
+sprintf("Best k: %d, Best MSE: %.3f", best_k, rmse_knn_v1)
 ```
 
 Similar to looking at all predictors, for the predictors our LASSO model chose, we see again that at k = 30, our RMSE is lowest, however, at k = 9 we have a low RMSE as well.
@@ -709,7 +728,7 @@ Similar to looking at all predictors, for the predictors our LASSO model chose, 
 ```{r model-obj-two-knn-couple-vars-v2}
 set.seed(1234)
 train_control <- trainControl(method = "cv", number = 5)
-knn_model <- train(
+knn_v2_model <- train(
   Lgth.of.Sty ~ Age + Inf.Risk + Region + Med.Sc.Aff,
   data = cleaned_obj_2,
   method = "knn",
@@ -717,22 +736,82 @@ knn_model <- train(
   tuneGrid = expand.grid(k = c(1:10, 20, 30))
 )
 
-print(knn_model)
+print(knn_v2_model)
 ```
 
 ##### KNN Tune Plot
 
 ```{r model-obj-two-knn-couple-vars-v2-plot}
-plot(knn_model)
+plot(knn_v2_model)
 ```
 
 ##### KNN Best Tune
 
 ```{r model-obj-two-knn-couple-vars-v2-best-tune}
-knn_results <- knn_model$results
-best_k <- knn_model$bestTune$k
-best_mse <- min(knn_results$RMSE^2)
-sprintf("Best k: %d, Best MSE: %.3f", best_k, best_mse)
+knn_results <- knn_v2_model$results
+best_k <- knn_v2_model$bestTune$k
+rmse_knn_v2 <- knn_results$RMSE[knn_results$k == best_k]
+
+sprintf("Best k: %d, Best MSE: %.3f", best_k, rmse_knn_v2)
 ```
 
 Interestingly, for the predictors of Age, Inf.Risk, Med.Sc.Aff, and Region, k = 10 has the best RMSE.
+
+
+## Model Comparision
+
+```{r model-comparision}
+lm_all_predictors <- attr(terms(test_model_fit), "term.labels")
+lm_no_outliers_predictors <- attr(terms(test_model_remove_fit), "term.labels")
+anova_predictors <- rownames(anova_results)
+lasso_predictors <- lasso_table$Feature
+knn_all_predictors <- attr(knn_all_model$terms, "term.labels")
+knn_v1_predictors <- attr(knn_v1_model$terms, "term.labels")
+knn_v2_predictors <- attr(knn_v2_model$terms, "term.labels")
+
+model_comparison <- tibble(
+  Model = c(
+    "Linear Model (All Predictors)",
+    "Linear Model (No Outliers)",
+    "ANOVA",
+    "LASSO",
+    "k-NN (All Predictors)",
+    "k-NN (Version 1)",
+    "k-NN (Version 2)"
+  ),
+  RMSE = c(
+    rmse_lm_before,
+    rmse_lm_after,
+    rmse_anova,
+    rmse_lasso,
+    rmse_knn_all,
+    rmse_knn_v1,
+    rmse_knn_v2
+  ) |> round(3),
+  Features = c(
+    str_c(lm_all_predictors, collapse = " + "),
+    str_c(lm_no_outliers_predictors, collapse = " + "),
+    str_c(anova_predictors[anova_predictors != "Residuals"], collapse = " + "),
+    str_c(lasso_predictors, collapse = " + "),
+    str_c(knn_all_predictors, collapse = " + "),
+    str_c(knn_v1_predictors, collapse = " + "),
+    str_c(knn_v2_predictors, collapse = " + ")
+  )
+) |> arrange(RMSE)
+
+datatable(model_comparison, options = list(
+  dom = "t",
+  autoWidth = TRUE,
+  columnDefs = list(
+    list(width = "120px", targets = 1, className = "dt-center"),
+    list(targets = 2, render = JS(
+      "function(data, type, row) {
+        return type === 'display' && data.length > 50 ?
+          '<span style=\"white-space:normal;\">' + data + '</span>' :
+          data;
+      }"
+    ))
+  )
+), rownames = FALSE)
+```
+
