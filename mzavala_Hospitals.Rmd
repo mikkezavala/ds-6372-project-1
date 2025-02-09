@@ -109,6 +109,7 @@ ggplot(hospital_data, aes(y = Lgth.of.Sty, x = N.Beds)) +
   labs(title = "Length of Stay vs Avg. Number of Beds")
 ```
 
+
 ### Variable Inflation Analysis
 
 ```{r}

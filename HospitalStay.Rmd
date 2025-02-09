@@ -8,8 +8,9 @@ date: "2025-01-29"
 output: 
   # word_document: default
   html_document:
-    toc: false
-    toc_float: 
+    toc: true
+    toc_float: true
+    toc_depth: 4
     df_print: paged
 ---
 
@@ -49,7 +50,7 @@ lapply(required_packages, library, character.only = TRUE)
 
 ```
 
-```{r defaults}
+```{r defaults, include=FALSE}
 #' Global palette and theme
 base_palette <- brewer.pal(n = 8, name = "Dark2")
 scale_fill_discrete <- function(...) scale_fill_manual(values = base_palette, ...)
