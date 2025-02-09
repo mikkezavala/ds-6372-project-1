@@ -14,6 +14,13 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+#' - Style rules
+#' Align to code style guide found at TidyVerse <a href='https://style.tidyverse.org/'>R Style Guide</a>
+#'
+#' - Publishing to Github Pages
+#' When ready to push the code please execute the knit command to generate an index.html and make sure is cleanup
+#'
+
 knitr::opts_chunk$set(
   error = FALSE,
   warning = FALSE,
@@ -49,13 +56,6 @@ scale_fill_discrete <- function(...) scale_fill_manual(values = base_palette, ..
 scale_color_discrete <- function(...) scale_color_manual(values = base_palette, ...)
 theme_set(theme_minimal(base_size = 14))
 
-#' - Style rules
-#' Align to code style guide found at TidyVerse <a href='https://style.tidyverse.org/'>R Style Guide</a>
-#'
-#' - Publishing to Github Pages
-#' When ready to push the code please execute the knit command to generate an index.html and make sure is cleanup
-#'
-
 ```
 
 ```{r produce artifacts, include=FALSE, eval=FALSE, message=TRUE}
@@ -82,7 +82,7 @@ build_artifact <- function(in_file, out_file, clean_only = FALSE) {
   
   if(!clean_only) {
     rmarkdown::render(in_file, output_file = out_file)
-    message("Rendering complete for: ", rmd_file)  
+    message("Rendering complete for: ", in_file)  
   }
   
 }
@@ -369,7 +369,7 @@ grid.arrange(grobs = plot_list, ncol = 2)
 
 ## Objective 1
 
-```{r model-obj-one-all-vars}
+```{r model-obj-one-all-vars, fig.width=10, fig.height=8, out.width="100%"}
 all_vars_model = lm(Lgth.of.Sty ~ . - RegionRaw, data = base_data)
 par(mfrow = c(2,2))
 plot(all_vars_model)
@@ -401,7 +401,7 @@ Number of Beds and Average Patients have *extremely* high VIFs, suggesting high 
 
 #### Linear Model
 
-```{r model-obj-one-test-mdl}
+```{r model-obj-one-test-mdl, fig.width=10, fig.height=8, out.width="100%"}
 test_model <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
 test_model_fit <- lm(test_model, data = base_data |> select(-RegionRaw))
 
@@ -486,7 +486,7 @@ datatable(final_table, options = list(dom = "t", width = "100%", scrollX = TRUE)
 
 ##### Linear Model without outliers
 
-```{r model-obj-one-test-mdl-outliers-remove}
+```{r model-obj-one-test-mdl-outliers-remove, fig.width=10, fig.height=8, out.width="100%"}
 test_model_remove <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
 test_model_remove_fit <- lm(test_model_remove, data = base_data[c(-112, -47), ] |> select(-RegionRaw))
 
