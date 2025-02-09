@@ -252,7 +252,7 @@ ggcorrplot(log_lin_correlation_matrix, lab = TRUE, title = "Log-Linear")
 
 ### Length of Stay vs other continuous variables
 
-```{r plot-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+```{r plot-len-stay-vs-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
@@ -266,7 +266,7 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 
 ### Length of Stay vs Log of other continuous variables
 
-```{r plot-len-stay-vs-log-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+```{r plot-len-stay-vs-log-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
@@ -281,7 +281,7 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 
 ### Log Length of Stay vs other continuous variables
 
-```{r plot-log-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+```{r plot-log-len-stay-vs-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 
 # Define color palette
