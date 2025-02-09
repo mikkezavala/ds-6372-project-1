@@ -559,7 +559,7 @@ anova_results <- anova(anova_model)
 ```{r anova-model-vif}
 vif(anova_model)
 ```
-
+High VIF values: N.Beds (36.77), Avg.Pat (43.28), and Avg.Nur (8.34). Suggesting multicollinearity is a concern for these variables.
 
 ```{r}
 mse <- anova_results["Residuals", "Mean Sq"]
@@ -569,9 +569,7 @@ sprintf("Anova RMSE %.3f", rmse)
 
 Interpretations:
 
--   A one-unit increase in infection risk leads to an increase of \~$0.91$ days in hospital stay (in the baseline NE region). This is highly statistically significant, suggesting infection risk is a key predictor of length of stay.
-
-Patients in North Central hospitals stay approximately 3.02 days longer than those in the Northeast on average, with a statistically significant result. Similarly, patients in Southern hospitals have an average stay that is about 2.59 days longer than in the Northeast, also showing statistical significance. In the Western region, the average length of stay is around 3.5 days longer than in the Northeast; however, this result is only marginally significant.
+The ANOVA model indicates that significant predictors of Length of Stay (Lgth.of.Sty) include Age (p = 0.0148), where a 1 year increase is associated with a 0.0578-day increase, and Infection Risk (p = 0.0001), significantly increasing the length of stay. Regional differences also play a role, with patients in the NC region staying 0.586 days less (p = 0.0446), those in the South staying 0.870 days less (p = 0.0034), and those in the West experiencing the greatest reduction of 1.892 days (p < 0.001). On the other hand, several predictors, including R.Cul.Rat, R.CX.ray.Rat, N.Beds, Med.Sc.AffNo, Avg.Pat, Avg.Nur, and Pct.Ser.Fac, do not significantly impact the length of stay (p > 0.05), suggesting that they may not be strong predictors and may need to be removed from the model.
 
 ```{r lasso-model}
 
