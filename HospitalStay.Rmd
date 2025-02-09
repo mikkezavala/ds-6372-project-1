@@ -152,7 +152,7 @@ Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observ
 ```{r data-hist}
 ggplot(hospital_data, aes(x = Lgth.of.Sty, fill = factor(1))) +
   geom_histogram(binwidth = 2, color = "black") +
-  labs(x = "Length of Stay (Days)", y = "Count", title = "") +
+  labs(x = "Length of Stay (Days)", y = "Count", title = "Distribution of Length of Stay") +
   scale_fill_manual(values = base_palette[3]) +
   guides(fill = "none")
 ```
@@ -201,7 +201,7 @@ cor_matrix = cor(base_data |> select(-Region, -Med.Sc.Aff))
 ggcorrplot(cor_matrix, lab = TRUE)
 ```
 
-Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
+Length of Stay correlated more strongly with: + Infection Risk, + Average Patients.
 
 ```{r corr-plot-base-data, fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
 pairs(base_data |> select(-Region, -Med.Sc.Aff), panel = function(x, y) {
@@ -286,7 +286,7 @@ ggplot(long_data, aes(x = log(Value), y = Lgth.of.Sty)) +
 
 
 # Define color palette
-plot_colors <- RColorBrewer::brewer.pal(n = 16, name = "Set2")
+plot_colors <- RColorBrewer::brewer.pal(n = 16, name = "Set1")
 
 # Convert data to long format for faceting
 long_data <- base_data %>%
