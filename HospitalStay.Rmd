@@ -674,6 +674,7 @@ sprintf("Best k: %d, Best MSE: %.3f", best_k, best_mse)
 When looking at all numeric predictors, the best k for RMSE is 30, however, we see that at k = 9, we also have quite a low RMSE as well.
 
 #### KNN Couple Variables v1
+
 ```{r model-obj-two-knn-couple-vars-v1}
 set.seed(1234)
 train_control <- trainControl(method = "cv", number = 5)
@@ -689,11 +690,13 @@ print(knn_model)
 ```
 
 ##### KNN Tune Plot
+
 ```{r model-obj-two-knn-couple-vars-v1-plot}
 plot(knn_model)
 ```
 
 ##### KNN Best Tune
+
 ```{r model-obj-two-knn-couple-vars-v1-best-tune}
 knn_results <- knn_model$results
 best_k <- knn_model$bestTune$k
@@ -706,17 +709,32 @@ Similar to looking at all predictors, for the predictors our LASSO model chose, 
 #### KNN Couple Variables v2
 
 ```{r model-obj-two-knn-couple-vars-v2}
+set.seed(1234)
 train_control <- trainControl(method = "cv", number = 5)
-set.seed(1234)  # Set a seed for reproducibility
 knn_model <- train(
-  Lgth.of.Sty ~ Age + Inf.Risk + Region + Med.Sc.Aff, # Formula: regress Lgth.of.Stay on predictors
-  data = cleanData,         # Dataset containing only numeric predictors
-  method = "knn",              # Specify k-Nearest Neighbors as the model
-  trControl = train_control,   # 10-fold cross-validation
-  tuneGrid = expand.grid(k=c(1:10,20,30))  # Grid of k values to explore
+  Lgth.of.Sty ~ Age + Inf.Risk + Region + Med.Sc.Aff,
+  data = cleaned_obj_2,
+  method = "knn",
+  trControl = train_control,
+  tuneGrid = expand.grid(k = c(1:10, 20, 30))
 )
 
 print(knn_model)
-plot(knn_model)
-print(knn_model$bestTune)
 ```
+
+##### KNN Tune Plot
+
+```{r model-obj-two-knn-couple-vars-v2-plot}
+plot(knn_model)
+```
+
+##### KNN Best Tune
+
+```{r model-obj-two-knn-couple-vars-v2-best-tune}
+knn_results <- knn_model$results
+best_k <- knn_model$bestTune$k
+best_mse <- min(knn_results$RMSE^2)
+sprintf("Best k: %d, Best MSE: %.3f", best_k, best_mse)
+```
+
+Interestingly, for the predictors of Age, Inf.Risk, Med.Sc.Aff, and Region, k = 10 has the best RMSE.
