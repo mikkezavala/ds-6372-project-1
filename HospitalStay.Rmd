@@ -91,15 +91,11 @@ build_artifact <- function(in_file, out_file, clean_only = FALSE) {
 build_artifact(in_file ="HospitalStay.Rmd", out_file = "index.html", clean_only = FALSE)
 ```
 
-# Hospital Stay
+# Hospital Stay Analysis
 
 ## EDA
 
 ### Import Data
-
-```{r data-load}
-hospital_data <- read.csv("./project_hospitals.csv", header = TRUE)
-```
 
 ### Column Descriptions
 
@@ -124,12 +120,26 @@ hospital_data <- read.csv("./project_hospitals.csv", header = TRUE)
     -   Average number of full time nurses.
 -   Pct.Ser.Fac: Percentage of service facilities.
     -   Percent of 35 potential facilities and services that are provided by the hospital
+    
+
+```{r data-load}
+hospital_data <- read.csv("./project_hospitals.csv", header = TRUE)
+```
+
+```{r basic EDA}
+# View the first few rows of the dataset
+head(hospital_data)
+
+# View column names (features)
+colnames(hospital_data)
+```
 
 ### Sanity check
 
 #### Summary of the Data Set
 
 ```{r data-summary}
+# Summary statistics of all variables
 summary(hospital_data)
 ```
 
@@ -142,7 +152,17 @@ colSums(is.na(hospital_data))
 ##### Plot of missing data
 
 ```{r data-viz-empty}
-vis_miss(hospital_data)
+# Visualizing Missing Values with Better Formatting
+vis_miss(hospital_data) +
+  labs(title = "Visualizing Missing Data",
+       x = "",
+       y = "") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 8, face = "bold"),
+    plot.subtitle = element_text(size = 8),
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
 ```
 
 Our data set `hospitalData` from the csv `HospitalDurations` contains 113 observations of 12 variables. We have no missing values for any variable, thus we do not need to impute for any observations. Out of the 12 variables, one of them is an identifier variable `ID`, and will not be used for predicting. The patient's length of stay `Lgth.of.Sty` is the variable we would like to predict for. Therefor, we have 10 potential explanatory variables and 1 variable we are trying to predict for.
