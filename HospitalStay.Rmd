@@ -162,7 +162,7 @@ We see some slight right skew for Lgt.of.Sty
 
 ```{r data-prepare-base-data}
 base_data <- hospital_data |> select(-ID)
-base_data$RegionRaw <- base_data$Region
+#base_data$RegionRaw <- base_data$Region
 base_data$Region <- as.factor(base_data$Region) # convert Region from int to factor
 base_data$Med.Sc.Aff <- as.factor(base_data$Med.Sc.Aff) # convert Med.Sc.Aff from int to factor
 
@@ -370,7 +370,7 @@ grid.arrange(grobs = plot_list, ncol = 2)
 ## Objective 1
 
 ```{r model-obj-one-all-vars, fig.width=10, fig.height=8, out.width="100%"}
-all_vars_model = lm(Lgth.of.Sty ~ . - RegionRaw, data = base_data)
+all_vars_model = lm(Lgth.of.Sty ~ ., data = base_data)
 par(mfrow = c(2,2))
 plot(all_vars_model)
 ```
@@ -403,7 +403,7 @@ Number of Beds and Average Patients have *extremely* high VIFs, suggesting high 
 
 ```{r model-obj-one-test-mdl, fig.width=10, fig.height=8, out.width="100%"}
 test_model <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
-test_model_fit <- lm(test_model, data = base_data |> select(-RegionRaw))
+test_model_fit <- lm(test_model, data = base_data)
 
 par(mfrow = c(2,2))
 plot(test_model_fit)
@@ -431,7 +431,7 @@ vif(test_model_fit)
 #### Observation #47 and #112 high residuals
 
 ```{r model-obj-one-test-mdl-outliers-table}
-numeric_data <- base_data |> select(where(is.numeric), -RegionRaw)
+numeric_data <- base_data |> select(where(is.numeric))
 stats <- numeric_data |>
   dplyr::summarise(
     dplyr::across(
@@ -488,7 +488,7 @@ datatable(final_table, options = list(dom = "t", width = "100%", scrollX = TRUE)
 
 ```{r model-obj-one-test-mdl-outliers-remove, fig.width=10, fig.height=8, out.width="100%"}
 test_model_remove <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
-test_model_remove_fit <- lm(test_model_remove, data = base_data[c(-112, -47), ] |> select(-RegionRaw))
+test_model_remove_fit <- lm(test_model_remove, data = base_data[c(-112, -47), ])
 
 par(mfrow = c(2,2))
 plot(test_model_remove_fit)
@@ -534,7 +534,6 @@ The reduction in RMSE from 1.295 to 0.966 after removing observations 47 and 112
 
 Additionally by removing highly correlated variables such as Number of Beds and Average Patients, we’ve substantially lowered variance inflation. This indicates that our changes have mitigated multicollinearity and improved the stability and interpretability of the model.
 
-### Exploring Interaction
 
 #### Prepare data for section
 
@@ -542,29 +541,10 @@ Additionally by removing highly correlated variables such as Number of Beds and 
 interaction_data <- base_data[c(-112, -47), ]
 ```
 
-#### Length of Stay vs Infection Risk by Region Interaction
-
-```{r plot-interaction-data}
-interaction_data$RegionAsFactor <- factor(
-  interaction_data$RegionRaw,
-  levels = c(1, 2, 3, 4),
-  labels = c("NE", "NC", "S", "W")
-)
-
-ggplot(interaction_data, aes(x = Inf.Risk, y = Lgth.of.Sty, color = RegionAsFactor)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  ggtitle("Length of Stay vs Infection Risk by Region") +
-  scale_color_brewer(palette = "Dark2", name = "Region") +
-  labs(color = "Region")
-```
-
-NE (Green) shows the steepest slope: Infection risk has a stronger impact on Length of Stay in Northeast hospitals compared to other regions.However, the NE region has more high outliers. NC (Blue) and S (Green) have moderate slopes, suggesting that infection risk moderately influences hospital stay duration in these regions. W (Purple) appears almost flat, low variance. This may indicate that in Western hospitals, infection risk has little to no impact on length of stay.
-
-### Anova Model - Fit ANOVA model with interaction effect
+### Anova Model - Fit ANOVA model
 
 ```{r anova-model-lm-summary}
-anova_model <- lm(Lgth.of.Sty ~ Inf.Risk + RegionAsFactor, data = interaction_data)
+anova_model <- lm(Lgth.of.Sty ~ ., data = interaction_data)
 summary(anova_model)
 ```
 
@@ -595,7 +575,7 @@ Patients in North Central hospitals stay approximately 3.02 days longer than tho
 
 ```{r lasso-model}
 
-lasso_data <- interaction_data |> select(-RegionRaw)
+lasso_data <- interaction_data
 # Prepare data: Separate predictors (X) and target variable (y)
 X <- as.matrix(lasso_data[, -which(names(lasso_data) == "Lgth.of.Sty")])  # Convert predictors to matrix
 y <- interaction_data$Lgth.of.Sty  # Target variable
