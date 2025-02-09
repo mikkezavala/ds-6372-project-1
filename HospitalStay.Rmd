@@ -196,20 +196,20 @@ summary(base_data) # sanity check
 ### Correlation
 
 ```{r corr-base-data}
+cor_matrix = cor(base_data |> select(-Region, -Med.Sc.Aff))
 ggcorrplot(cor_matrix, lab = TRUE)
 ```
 
 Length of Stay correlated more strongly with: + Infection Risk, + Average Patients, - Region (however, this is not a numerical variable but rather a categorical variable and should be discounted)
 
-```{r corr-plot-base-data fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
-ggpairs(base_data |> select(-Region, -Med.Sc.Aff),
-        lower = list(continuous = wrap("points", alpha = 0.5, color = base_palette[2])),
-        upper = list(continuous = wrap("cor", size = 4)),  
-        diag = list(continuous = wrap("densityDiag", fill = base_palette[4]))) +
-  theme_minimal()
+```{r corr-plot-base-data, fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
+pairs(base_data |> select(-Region, -Med.Sc.Aff), panel = function(x, y) {
+  points(x, y, pch = 16, col = "blue")  # Scatter points
+  abline(lm(y ~ x), col = "red")  # Add trend line
+})
 ```
 
-```{r pairs-plot-base-data  fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
+```{r pairs-plot-base-data, fig.width=20, fig.height=15, out.width="100%", fig.align="center"}
 ggpairs(base_data, lower = list(continuous = wrap("smooth", method = "lm", color = "blue")))
 ```
 
@@ -252,10 +252,29 @@ ggcorrplot(log_lin_correlation_matrix, lab = TRUE, title = "Log-Linear")
 
 ### Length of Stay vs other continuous variables
 
+<<<<<<< HEAD
 ```{r plot-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
+=======
+```{r plot-len-stay-vs-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+
+idx <- 0
+for (i in c(2:6, 9:11)) {
+  idx <- idx + 1
+  cur_color <- ifelse(idx == 8, "red", base_palette[idx])
+  temp_plot <- ggplot(data = base_data, aes(x = base_data[, i], y = Lgth.of.Sty)) +
+    geom_point() +
+    geom_smooth(color = cur_color) +
+    ggtitle(paste0(base_data_labels[i], " vs Length of Stay")) +
+    xlab(base_data_labels[i]) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "none", plot.margin = unit(rep(0.5, 4), "cm"))
+  plot_list[[length(plot_list) + 1]] <- temp_plot
+}
+>>>>>>> 02313935ab81360b780ebedf124bb60566e14204
 
 ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
   geom_point(alpha = 0.6) +
@@ -266,7 +285,25 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 
 ### Length of Stay vs Log of other continuous variables
 
+<<<<<<< HEAD
 ```{r plot-len-stay-vs-log-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+=======
+```{r plot-len-stay-vs-log-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+idx <- 0
+for (i in c(2:6, 9:11)) {
+  idx <- idx + 1
+  cur_color <- ifelse(idx == 8, "red", base_palette[idx])
+  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = Lgth.of.Sty)) +
+    geom_point() +
+    geom_smooth(color = cur_color) +
+    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
+    xlab(paste0("log ", base_data_labels[i])) +
+    ylab("Length of Stay (Days)") +
+    theme(legend.position = "none", plot.margin = unit(rep(0.25, 4), "cm"))
+  plot_list[[length(plot_list) + 1]] <- temp_plot
+}
+>>>>>>> 02313935ab81360b780ebedf124bb60566e14204
 
 long_data <- base_data %>%
   pivot_longer(cols = c(2:6, 9:11), names_to = "Variable", values_to = "Value")
@@ -281,6 +318,7 @@ ggplot(long_data, aes(x = Value, y = Lgth.of.Sty)) +
 
 ### Log Length of Stay vs other continuous variables
 
+<<<<<<< HEAD
 ```{r plot-log-len-stay-vs-cont fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 
 
@@ -304,11 +342,29 @@ ggplot(long_data, aes(x = log(Value), y = log(Lgth.of.Sty))) +
   theme_minimal() +
   theme(legend.position = "none")
 
+=======
+```{r plot-log-len-stay-vs-cont, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+plot_list <- list()
+idx <- 0
+for (i in c(2:6, 9:11)) {
+  idx <- idx + 1
+  cur_color <- ifelse(idx == 8, "red", base_palette[idx])
+  temp_plot <- ggplot(data = base_data, aes(x = log(base_data[, i]), y = log(Lgth.of.Sty))) +
+    geom_point() +
+    geom_smooth(color = cur_color) +
+    ggtitle(paste0("Log ", base_data_labels[i], " vs Length of Stay")) +
+    xlab(base_data_labels[i]) +
+    ylab("log Length of Stay (Days)") +
+    theme(legend.position = "none", plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
+  plot_list[[length(plot_list) + 1]] <- temp_plot
+}
+grid.arrange(grobs = plot_list, ncol = 2)
+>>>>>>> 02313935ab81360b780ebedf124bb60566e14204
 ```
 
 ### Categorical vs Length of Stay
 
-```{r out.width="100%", fig.align="center"}
+```{r plot-cat-vs-len-stay, out.width="100%", fig.align="center"}
 region_patient <- ggplot(data = base_data, aes(x = Region, y = Lgth.of.Sty, colour = Med.Sc.Aff)) +
   geom_boxplot() +
   ggtitle("Region vs Patient Length of Stay", "Grouped by Medical School Affiliation")
@@ -328,7 +384,7 @@ By looking at the distributions (via the boxplots), we can see that there are so
 
 ### Continuous grouped by Categorical vs Length of Stay
 
-```{r fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
+```{r plot-cont-group-cat-vs-len-stay, fig.width=14, fig.height=12, out.width="100%", fig.align="center"}
 plot_list <- list()
 indexes <- c(2:6, 9:11)
 for (i in seq_along(indexes)) {
@@ -349,7 +405,7 @@ grid.arrange(grobs = plot_list, ncol = 2)
 
 #### Grouped by Medical School Affiliation
 
-```{r   fig.width=12, fig.height=10, out.width="100%", fig.align="center"}
+```{r plot-group-med-aff, fig.width=12, fig.height=10, out.width="100%", fig.align="center"}
 plot_list <- list()
 indexes <- c(2:6, 9:11)
 for (i in seq_along(indexes)) {
@@ -370,7 +426,7 @@ grid.arrange(grobs = plot_list, ncol = 2)
 
 ## Objective 1
 
-```{r all variables model}
+```{r model-obj-one-all-vars}
 all_vars_model = lm(Lgth.of.Sty ~ . - RegionRaw, data = base_data)
 par(mfrow = c(2,2))
 plot(all_vars_model)
@@ -378,7 +434,7 @@ plot(all_vars_model)
 
 ### All Variables Model Sumary
 
-```{r}
+```{r model-obj-one-all-vars-summ}
 summary(all_vars_model)
 ```
 
@@ -392,7 +448,7 @@ No major assumption violations are evident, but examining these observations cou
 
 ### Variable Inflation
 
-```{r}
+```{r model-obj-one-all-vars-vif}
 vif(all_vars_model)
 ```
 
@@ -402,7 +458,7 @@ Number of Beds and Average Patients have *extremely* high VIFs, suggesting high 
 
 #### Linear Model
 
-```{r}
+```{r model-obj-one-test-mdl}
 test_model <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
 test_model_fit <- lm(test_model, data = base_data |> select(-RegionRaw))
 
@@ -421,17 +477,17 @@ The residuals vs. leverage plot, #47 no longer rises as close to the typical Coo
 
 ##### Model Summary
 
-```{r}
+```{r model-obj-one-test-mdl-summary}
 summary(test_model_fit)
 ```
 
-```{r}
+```{r model-obj-one-test-mdl-vif}
 vif(test_model_fit)
 ```
 
 #### Observation #47 and #112 high residuals
 
-```{r}
+```{r model-obj-one-test-mdl-outliers-table}
 numeric_data <- base_data |> select(where(is.numeric), -RegionRaw)
 stats <- numeric_data |>
   dplyr::summarise(
@@ -487,7 +543,7 @@ datatable(final_table, options = list(dom = "t", width = "100%", scrollX = TRUE)
 
 ##### Linear Model without outliers
 
-```{r}
+```{r model-obj-one-test-mdl-outliers-remove}
 test_model_remove <- Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region
 test_model_remove_fit <- lm(test_model_remove, data = base_data[c(-112, -47), ] |> select(-RegionRaw))
 
@@ -506,17 +562,17 @@ In the Scale-Location plot, variance appears more stable, reinforcing the improv
 
 Finally, the Residuals vs. Leverage plot confirms that these observations had high leverage and strong influence on model coefficients, as their removal results in a more balanced distribution of leverage across data points.
 
-```{r}
+```{r model-obj-one-test-mdl-outliers-remove-summary}
 summary(test_model_remove_fit)
 ```
 
-```{r}
+```{r model-obj-one-test-mdl-outliers-remove-vif}
 vif(test_model_remove_fit)
 ```
 
 #### Performance comparision after removing outliers
 
-```{r}
+```{r model-obj-one-test-mdl-outliers-remove-rmse}
 rmse <- function(actual, predicted) {
   sqrt(mean((actual - predicted)^2))
 }
@@ -524,7 +580,8 @@ rmse <- function(actual, predicted) {
 predictions_before <- predict(test_model_fit, base_data)
 rmse_before <- RMSE(predictions_before, base_data$Lgth.of.Sty)
 
-predictions_after <- predict(test_model_remove_fit, base_data[c(-112, -47), ])
+base_data_filtered <- base_data[c(-112, -47), ]
+predictions_after <- predict(test_model_remove_fit, base_data_filtered)
 rmse_after <- RMSE(predictions_after, base_data_filtered$Lgth.of.Sty)
 
 sprintf("RMSE without removing = %.3f -- RMSE without 112 and 47 = %.3f", rmse_before, rmse_after)
@@ -538,13 +595,13 @@ Additionally by removing highly correlated variables such as Number of Beds and 
 
 #### Prepare data for section
 
-```{r}
+```{r model-obj-one-interaction-data}
 interaction_data <- base_data[c(-112, -47), ]
 ```
 
 #### Length of Stay vs Infection Risk by Region Interaction
 
-```{r Length of Stay vs Infection Risk by Region}
+```{r plot-interaction-data}
 interaction_data$RegionAsFactor <- factor(
   interaction_data$RegionRaw,
   levels = c(1, 2, 3, 4),
@@ -563,20 +620,20 @@ NE (Green) shows the steepest slope: Infection risk has a stronger impact on Len
 
 ### Anova Model - Fit ANOVA model with interaction effect
 
-```{r}
+```{r anova-model-lm-summary}
 anova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data = interaction_data)
 summary(anova_model)
 ```
 
 #### ANOVA test for significance of interaction terms
 
-```{r}
+```{r anova-model}
 anova(anova_model)
 ```
 
 #### Checking Variance Inflation Factor (VIF) for multicollinearity
 
-```{r}
+```{r anova-model-vif}
 vif(anova_model)
 ```
 
@@ -586,7 +643,7 @@ Interpretations:
 
 Patients in North Central hospitals stay approximately 3.02 days longer than those in the Northeast on average, with a statistically significant result. Similarly, patients in Southern hospitals have an average stay that is about 2.59 days longer than in the Northeast, also showing statistical significance. In the Western region, the average length of stay is around 3.5 days longer than in the Northeast; however, this result is only marginally significant.
 
-```{r}
+```{r lasso-model}
 
 # Prepare data: Separate predictors (X) and target variable (y)
 X <- as.matrix(interaction_data[, -which(names(interaction_data) == "Lgth.of.Sty")])  # Convert predictors to matrix
@@ -646,21 +703,21 @@ print(paste("Adjusted R-squared:", adj_r_squared))
 
 After analyzing outliers we are going ahead to work without both outliers (observations 47 and 112)
 
-```{r}
+```{r model-obj-two-data-clean}
 origCleaned <- base_data
 cleaned_obj_2 <- base_data[c(-112, -47), ]
 ```
 
 ### KNN Model - Non-Paramatric
 
-```{r}
+```{r model-obj-two-knn}
 
-knn = lm(Lgth.of.Sty ~ Age + Inf.Risk + Med.Sc.Aff + Region, data = cleaned_obj_2)
-
-par(mfrow = c(2,2))
-plot(tempModel2)
-par(mfrow = c(1,1))
-
-summary(tempModel2)
-vif(tempModel2)
+# knn = lm(Lgth.of.Sty ~ Age + Inf.Risk + Med.Sc.Aff + Region, data = cleaned_obj_2)
+# 
+# par(mfrow = c(2,2))
+# plot(tempModel2)
+# par(mfrow = c(1,1))
+# 
+# summary(tempModel2)
+# vif(tempModel2)
 ```
