@@ -564,20 +564,27 @@ NE (Green) shows the steepest slope: Infection risk has a stronger impact on Len
 ### Anova Model - Fit ANOVA model with interaction effect
 
 ```{r anova-model-lm-summary}
-anova_model <- lm(Lgth.of.Sty ~ Inf.Risk * RegionAsFactor, data = interaction_data)
+anova_model <- lm(Lgth.of.Sty ~ Inf.Risk + RegionAsFactor, data = interaction_data)
 summary(anova_model)
 ```
 
 #### ANOVA test for significance of interaction terms
 
 ```{r anova-model}
-anova(anova_model)
+anova_results <- anova(anova_model)
 ```
 
 #### Checking Variance Inflation Factor (VIF) for multicollinearity
 
 ```{r anova-model-vif}
 vif(anova_model)
+```
+
+
+```{r}
+mse <- anova_results["Residuals", "Mean Sq"]
+rmse <- sqrt(mse)
+sprintf("Anova RMSE %.3f", rmse)
 ```
 
 Interpretations:
@@ -588,8 +595,9 @@ Patients in North Central hospitals stay approximately 3.02 days longer than tho
 
 ```{r lasso-model}
 
+lasso_data <- interaction_data |> select(-RegionRaw)
 # Prepare data: Separate predictors (X) and target variable (y)
-X <- as.matrix(interaction_data[, -which(names(interaction_data) == "Lgth.of.Sty")])  # Convert predictors to matrix
+X <- as.matrix(lasso_data[, -which(names(lasso_data) == "Lgth.of.Sty")])  # Convert predictors to matrix
 y <- interaction_data$Lgth.of.Sty  # Target variable
 
 # Perform LASSO regression with cross-validation
