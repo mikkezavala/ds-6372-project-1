@@ -542,11 +542,11 @@ rmse <- function(actual, predicted) {
 }
 
 predictions_before <- predict(test_model_fit, base_data)
-rmse_lm_before <- RMSE(predictions_before, base_data$Lgth.of.Sty)
+rmse_lm_before <- rmse(predictions_before, base_data$Lgth.of.Sty)
 
 base_data_filtered <- base_data[c(-112, -47), ]
 predictions_after <- predict(test_model_remove_fit, base_data_filtered)
-rmse_lm_after <- RMSE(predictions_after, base_data_filtered$Lgth.of.Sty)
+rmse_lm_after <- rmse(predictions_after, base_data_filtered$Lgth.of.Sty)
 
 sprintf("RMSE without removing = %.3f -- RMSE without 112 and 47 = %.3f", rmse_lm_before, rmse_lm_after)
 ```
@@ -554,6 +554,26 @@ sprintf("RMSE without removing = %.3f -- RMSE without 112 and 47 = %.3f", rmse_l
 The reduction in RMSE from 1.295 to 0.966 after removing observations 47 and 112 suggests that these points were contributing to higher model error. Their removal improves the model’s predictive accuracy, indicating that it generalizes better to new data and produces more reliable estimates
 
 Additionally by removing highly correlated variables such as Number of Beds and Average Patients, we’ve substantially lowered variance inflation. This indicates that our changes have mitigated multicollinearity and improved the stability and interpretability of the model.
+
+#### Model Interpretation
+
+```{r model-final-int}
+confint(test_model_remove_fit)
+```
+
+Our model Lgth.of.Sty ~ Age + Inf.Risk + R.Cul.Rat + R.CX.ray.Rat + Avg.Nur + Pct.Ser.Fac + Med.Sc.Aff + Region aims to predict Length of Stay (Lgth.of.Sty) based on key hospital and patient characteristics.
+
+-   Model Performance
+    -   The model explains 52.3% of the variance in Length of Stay (Lgth.of.Sty) (Adjusted R² = 0.523).
+    -   RMSE = 0.966, meaning our predictions deviate by approximately 0.97 days from actual hospital stays.
+
+-   Key Predictors
+    -   Infection Risk (Holding all other variables constant): A one-unit increase in Infection Risk is associated with an increase of approximated 0.69 days in Length of Stay (p < 0.001).
+    -   Region (West) (Holding all other variables constant): Patients in Western hospitals have an expected shorter stay of  approximated 2.09 days compared to the Northeast (p < 0.001).
+
+-   Confidence Intervals
+    -   Infection Risk 95% CI: (0.266, 0.673)
+    -   Region (West) 95% CI: (-2.756, -1.382)
 
 #### Prepare data for section
 
